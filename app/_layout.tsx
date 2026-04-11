@@ -8,6 +8,9 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 
+import { initDb } from '@/db/client';
+import { seedDb } from '@/db/seed';
+
 // Prevent splash screen from hiding before assets load
 SplashScreen.preventAutoHideAsync();
 
@@ -18,10 +21,15 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
+        // Initialize Database
+        await initDb();
+        // Seed Database with initial mock data
+        await seedDb();
+        
         // Asset loading could go here
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (e) {
-        console.warn(e);
+        console.warn('Database initialization error:', e);
       } finally {
         setAppIsReady(true);
       }

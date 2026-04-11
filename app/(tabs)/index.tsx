@@ -13,11 +13,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Card, ProgressBar, Badge } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
+import { useUser } from '@/hooks/use-user';
+import { useCourses } from '@/hooks/use-courses';
 import {
-  MOCK_USER,
   MOCK_DAILY_STATS,
   MOCK_QUICK_ACTIONS,
-  MOCK_COURSES,
   MOCK_CULTURE_TIP,
 } from '@/constants/mock-data';
 import { Image } from 'expo-image';
@@ -27,6 +27,15 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user, loading: userLoading } = useUser();
+  const { courses, loading: coursesLoading } = useCourses();
+
+  if (userLoading || coursesLoading || !user || courses.length === 0) {
+    return null; // Or a loading spinner
+  }
+
+  // Find the active course (mock logic: course with index 1 or current progression)
+  const activeCourse = courses[1] || courses[0];
 
   return (
     <View style={styles.container}>
@@ -49,11 +58,11 @@ export default function HomeScreen() {
               <View style={styles.headerTop}>
                  <View>
                     <Text style={styles.bannerSub}>CHÀO BUỔI SÁNG</Text>
-                    <Text style={styles.bannerMain}>An-nyeong, {MOCK_USER.name}! ✨</Text>
+                    <Text style={styles.bannerMain}>An-nyeong, {user.name}! ✨</Text>
                  </View>
                  <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.8}>
                     <Image 
-                      source={require('@/assets/images/user_avatar.png')} 
+                      source={user.avatar ? { uri: user.avatar } : require('@/assets/images/user_avatar.png')} 
                       style={styles.avatarImage} 
                       contentFit="cover"
                     />
@@ -61,7 +70,7 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.dailyQuoteBox}>
-                 <Text style={styles.quoteText}>"Hành trình vạn dặm bắt đầu từ một bước chân."</Text>
+                 <Text style={styles.quoteText}>&quot;Hành trình vạn dặm bắt đầu từ một bước chân.&quot;</Text>
               </View>
            </LinearGradient>
         </View>
@@ -70,17 +79,17 @@ export default function HomeScreen() {
         <View style={styles.statsOverviewRow}>
            <Card variant="elevated" style={styles.statMiniCard}>
               <Ionicons name="flame" size={20} color="#FF96BB" />
-              <Text style={styles.statMiniVal}>{MOCK_USER.streak}</Text>
+              <Text style={styles.statMiniVal}>{user.streak}</Text>
               <Text style={styles.statMiniLabel}>Ngày chuỗi</Text>
            </Card>
            <Card variant="elevated" style={styles.statMiniCard}>
               <Ionicons name="flash" size={20} color="#FBBF24" />
-              <Text style={styles.statMiniVal}>{MOCK_USER.xp}</Text>
+              <Text style={styles.statMiniVal}>{user.xp}</Text>
               <Text style={styles.statMiniLabel}>Kinh nghiệm</Text>
            </Card>
            <Card variant="elevated" style={styles.statMiniCard}>
               <Ionicons name="checkmark-circle" size={20} color="#34D399" />
-              <Text style={styles.statMiniVal}>{MOCK_USER.completedLessons}</Text>
+              <Text style={styles.statMiniVal}>{user.completedLessons}</Text>
               <Text style={styles.statMiniLabel}>Bài đã học</Text>
            </Card>
         </View>
@@ -156,17 +165,17 @@ export default function HomeScreen() {
                        <Ionicons name="school" size={26} color={Colors.white} />
                     </View>
                     <View style={{ flex: 1 }}>
-                       <Text style={styles.activeCourseTitle}>{MOCK_COURSES[1].title}</Text>
-                       <Text style={styles.activeCourseSub}>Chủ đề: {MOCK_COURSES[1].description}</Text>
+                       <Text style={styles.activeCourseTitle}>{activeCourse.title}</Text>
+                       <Text style={styles.activeCourseSub}>Chủ đề: {activeCourse.description}</Text>
                     </View>
                  </View>
                  <View style={styles.activeCourseProgress}>
                     <View style={styles.progHeader}>
                        <Text style={styles.progText}>Tiến trình khóa học</Text>
-                       <Text style={styles.progPerc}>{Math.round(MOCK_COURSES[1].progress * 100)}%</Text>
+                       <Text style={styles.progPerc}>{Math.round(activeCourse.progress * 100)}%</Text>
                     </View>
                     <ProgressBar 
-                       progress={MOCK_COURSES[1].progress} 
+                       progress={activeCourse.progress} 
                        height={8} 
                        color={Colors.white} 
                        backgroundColor="rgba(255,255,255,0.2)" 

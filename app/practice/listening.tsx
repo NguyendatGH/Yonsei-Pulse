@@ -8,7 +8,7 @@ import {
   TextInput,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, ProgressBar } from '@/components/ui';
@@ -17,9 +17,11 @@ import { MOCK_LISTENING_PARAGRAPHS } from '@/constants/mock-data';
 
 export default function ListeningScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ index?: string }>();
   const insets = useSafeAreaInsets();
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const data = MOCK_LISTENING_PARAGRAPHS[currentIdx];
+  const initialIndex = params.index ? parseInt(params.index, 10) : 0;
+  const [currentIdx, setCurrentIdx] = useState(initialIndex);
+  const data = MOCK_LISTENING_PARAGRAPHS[currentIdx] || MOCK_LISTENING_PARAGRAPHS[0];
 
   const renderContent = () => {
     const parts = data.korean.split('___');

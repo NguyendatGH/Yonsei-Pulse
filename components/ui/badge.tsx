@@ -4,13 +4,13 @@ import { Colors, Typography, Radius, Spacing } from '@/constants/theme';
 
 interface BadgeProps {
   readonly label: string;
-  readonly variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'accent';
+  readonly variant?: 'default' | 'success' | 'warning' | 'error' | 'info' | 'accent' | 'outlined';
   readonly size?: 'sm' | 'md';
   readonly style?: StyleProp<ViewStyle>;
 }
 
 export function Badge({ label, variant = 'default', size = 'sm', style }: BadgeProps) {
-  const variantStyle = VARIANT_MAP[variant];
+  const variantStyle = VARIANT_MAP[variant] || VARIANT_MAP.default;
   const sizeStyle = SIZE_MAP[size];
 
   return (
@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
 const SIZE_MAP = {
   sm: {
     container: { paddingHorizontal: Spacing.sm, paddingVertical: 2 },
-    text: { fontSize: Typography.sizes.xs },
+    text: { fontSize: 10 },
   },
   md: {
     container: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
@@ -43,29 +43,37 @@ const SIZE_MAP = {
   },
 } as const;
 
-const VARIANT_MAP = StyleSheet.create({
+const VARIANT_MAP = {
   default: {
-    container: { backgroundColor: Colors.primaryLight },
+    container: { backgroundColor: Colors.primary + '15' },
     text: { color: Colors.primary },
   },
   success: {
-    container: { backgroundColor: Colors.successLight },
-    text: { color: '#059669' },
+    container: { backgroundColor: Colors.success + '15' },
+    text: { color: Colors.success },
   },
   warning: {
-    container: { backgroundColor: Colors.warningLight },
-    text: { color: '#D97706' },
+    container: { backgroundColor: Colors.warning + '15' },
+    text: { color: Colors.warning },
   },
   error: {
-    container: { backgroundColor: Colors.errorLight },
-    text: { color: '#DC2626' },
+    container: { backgroundColor: Colors.error + '15' },
+    text: { color: Colors.error },
   },
   info: {
-    container: { backgroundColor: Colors.infoLight },
-    text: { color: '#2563EB' },
+    container: { backgroundColor: '#E0F2FE' },
+    text: { color: '#0369A1' },
   },
   accent: {
-    container: { backgroundColor: Colors.accentLight },
-    text: { color: Colors.accentDark },
+    container: { backgroundColor: Colors.accent + '15' },
+    text: { color: Colors.accent },
   },
-});
+  outlined: {
+    container: { 
+      backgroundColor: 'transparent', 
+      borderWidth: 1, 
+      borderColor: '#E2E8F0' 
+    },
+    text: { color: Colors.textSecondary },
+  },
+};

@@ -14,8 +14,32 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
 
+import { userRepo } from '@/db/repos/userRepo';
+
 export default function SignupScreen() {
   const router = useRouter();
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSignup = async () => {
+    if (!name || !email) {
+      alert('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await userRepo.createUser({ name, email });
+      router.push('/success');
+    } catch (err) {
+      console.error('Signup error:', err);
+      alert('Đăng ký không thành công. Có thể email đã tồn tại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -46,6 +70,8 @@ export default function SignupScreen() {
                   style={styles.inputText}
                   placeholder="Nguyễn Văn A"
                   placeholderTextColor={Colors.textTertiary}
+                  value={name}
+                  onChangeText={setName}
                 />
              </View>
           </View>
@@ -60,6 +86,8 @@ export default function SignupScreen() {
                   placeholderTextColor={Colors.textTertiary}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
                 />
              </View>
           </View>
@@ -73,6 +101,8 @@ export default function SignupScreen() {
                   placeholder="Tạo mật khẩu"
                   placeholderTextColor={Colors.textTertiary}
                   secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
                 />
              </View>
           </View>
@@ -87,11 +117,12 @@ export default function SignupScreen() {
           </View>
 
           <Button 
-            title="Đăng ký tài khoản"
-            onPress={() => router.push('/otp')}
+            title={loading ? "Đang xử lý..." : "Đăng ký tài khoản"}
+            onPress={handleSignup}
             fullWidth
             size="lg"
             style={styles.signupBtn}
+            disabled={loading}
           />
         </View>
 

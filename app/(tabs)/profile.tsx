@@ -11,10 +11,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
-import { MOCK_USER } from '@/constants/mock-data';
+import { useUser } from '@/hooks/use-user';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { user, loading } = useUser();
+
+  if (loading || !user) return null;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -37,7 +40,7 @@ export default function ProfileScreen() {
            >
               <View style={styles.avatarContainer}>
                  <Image 
-                   source={require('@/assets/images/user_avatar.png')} 
+                   source={user.avatar ? { uri: user.avatar } : require('@/assets/images/user_avatar.png')} 
                    style={styles.avatarImg} 
                    contentFit="cover"
                    transition={300}
@@ -46,23 +49,23 @@ export default function ProfileScreen() {
                     <Ionicons name="camera-outline" size={16} color={Colors.white} />
                  </TouchableOpacity>
               </View>
-              <Text style={styles.userName}>{MOCK_USER.name}</Text>
-              <Text style={styles.userHandle}>@nguyenvana_kr</Text>
+              <Text style={styles.userName}>{user.name}</Text>
+              <Text style={styles.userHandle}>@{user.email?.split('@')[0] || 'user'}</Text>
               
               <View style={styles.statsOverview}>
                  <View style={styles.overviewItem}>
-                    <Text style={styles.overviewVal}>24</Text>
-                    <Text style={styles.overviewLabel}>Cấp độ</Text>
+                    <Text style={styles.overviewVal}>{user.level}</Text>
+                    <Text style={styles.overviewLabel}>Trình độ</Text>
                  </View>
                  <View style={styles.overviewDivider} />
                  <View style={styles.overviewItem}>
-                    <Text style={styles.overviewVal}>1.2k</Text>
-                    <Text style={styles.overviewLabel}>Bạn bè</Text>
+                    <Text style={styles.overviewVal}>{user.xp}</Text>
+                    <Text style={styles.overviewLabel}>XP</Text>
                  </View>
                  <View style={styles.overviewDivider} />
                  <View style={styles.overviewItem}>
-                    <Text style={styles.overviewVal}>85%</Text>
-                    <Text style={styles.overviewLabel}>Hoàn thành</Text>
+                    <Text style={styles.overviewVal}>{Math.round((user.completedLessons / 50) * 100)}%</Text>
+                    <Text style={styles.overviewLabel}>Tiến độ</Text>
                  </View>
               </View>
            </LinearGradient>

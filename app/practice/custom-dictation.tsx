@@ -28,6 +28,8 @@ type WordPart = {
   display: string;
   isBlank: boolean;
   userInput: string;
+  charStart?: number;
+  charEnd?: number;
 };
 
 type ParagraphData = {
@@ -79,6 +81,8 @@ export default function DictationPracticeScreen() {
 
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
   const positionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasReceivedBoundary = useRef(false);
+  const playbackStartTime = useRef<number>(0);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -106,6 +110,14 @@ export default function DictationPracticeScreen() {
       audio.addEventListener('pause', onPause);
       audio.addEventListener('ended', onEnded);
       audio.addEventListener('error', onError);
+
+      // Pre-load voices for Chrome
+      if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
       
       return () => {
         audio.pause();
@@ -162,16 +174,27 @@ export default function DictationPracticeScreen() {
     const shuffled = indices.sort(() => Math.random() - 0.5);
     const blankIndices = new Set(shuffled.slice(0, count));
     
+    let lastFoundIndex = 0;
     const parts: WordPart[] = words.map((word, index) => {
       const cleanWord = word.replace(/[.,!?]/g, '');
       const isBlank = blankIndices.has(index) && cleanWord.length > 1;
-      return {
+      
+      const charStart = text.indexOf(word, lastFoundIndex);
+      if (charStart !== -1) {
+        lastFoundIndex = charStart + word.length;
+      }
+      
+      const part = {
         id: index,
         original: cleanWord,
         display: word,
         isBlank,
         userInput: '',
+        charStart: charStart === -1 ? 0 : charStart,
+        charEnd: charStart === -1 ? 0 : charStart + word.length
       };
+      
+      return part;
     });
 
     setWordParts(parts);
@@ -211,21 +234,61 @@ export default function DictationPracticeScreen() {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
     
     window.speechSynthesis.cancel();
+    setCurrentCharIndex(0);
+    setPositionMillis(0);
+    hasReceivedBoundary.current = false;
     
     const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Improved voice selection for Chrome/Web
+    const voices = window.speechSynthesis.getVoices();
+    const koreanVoice = voices.find(v => v.lang === 'ko-KR' || v.lang.startsWith('ko'));
+    if (koreanVoice) {
+      utterance.voice = koreanVoice;
+    }
+    
     utterance.lang = 'ko-KR';
     utterance.rate = rate;
     
     utterance.onstart = () => {
       setIsPlaying(true);
+      playbackStartTime.current = Date.now();
     };
-    
+
     utterance.onend = () => {
       setIsPlaying(false);
-      setCurrentCharIndex(0);
+      setCurrentCharIndex(text.length);
+      setPositionMillis(durationMillis);
+      
       if (positionIntervalRef.current) {
         clearInterval(positionIntervalRef.current);
         positionIntervalRef.current = null;
+      }
+
+      setTimeout(() => {
+        setCurrentCharIndex(0);
+        setPositionMillis(0);
+      }, 1500);
+    };
+
+    utterance.onboundary = (event) => {
+      if (event.name === 'word') {
+        hasReceivedBoundary.current = true;
+        setCurrentCharIndex(event.charIndex);
+        
+        // --- REAL-TIME CALIBRATION ---
+        const elapsed = Date.now() - playbackStartTime.current;
+        if (elapsed > 200 && event.charIndex > 0) {
+           // Calculate actual speed: characters per millisecond
+           const actualCPMS = event.charIndex / elapsed;
+           // Recalculate total duration based on actual measured speed
+           const newDuration = text.length / actualCPMS;
+           setDurationMillis(newDuration);
+           setPositionMillis(elapsed);
+        } else {
+           const progress = event.charIndex / (text.length || 1);
+           setPositionMillis(progress * durationMillis);
+        }
       }
     };
     
@@ -237,15 +300,28 @@ export default function DictationPracticeScreen() {
     speechSynthesisRef.current = utterance;
     
     const charCount = text.length;
-    const estimatedDuration = (charCount / rate) * 1000;
+    setTotalChars(charCount);
+    // 5.5 chars per second to ensure highlights reach the end before end of audio
+    const estimatedDuration = (charCount / (rate * 5.5)) * 1000; 
     setDurationMillis(estimatedDuration);
-    
+
+    // Fallback interval for smooth progress bar and highlighting if onboundary fails
     positionIntervalRef.current = setInterval(() => {
       setPositionMillis(prev => {
-        const newPos = prev + 100;
-        const progress = newPos / estimatedDuration;
-        setCurrentCharIndex(Math.floor(progress * charCount));
-        return newPos >= estimatedDuration ? estimatedDuration : newPos;
+        const next = prev + 100;
+        if (next >= estimatedDuration) {
+          // Don't clear yet, wait for onend
+          return estimatedDuration;
+        }
+        
+        // Only update char index if onboundary isn't providing higher precision
+        if (!hasReceivedBoundary.current) {
+          const progress = next / estimatedDuration;
+          const fallbackCharIndex = Math.floor(progress * charCount);
+          setCurrentCharIndex(curr => Math.max(curr, fallbackCharIndex));
+        }
+        
+        return next;
       });
     }, 100);
     
@@ -566,7 +642,16 @@ export default function DictationPracticeScreen() {
         
         <View style={styles.progressContainer}>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressFill, { width: `${(positionMillis / (durationMillis || 1)) * 100}%` }]} />
+            <View 
+              style={[
+                styles.progressFill, 
+                { 
+                  width: totalChars > 0 
+                    ? `${(currentCharIndex / totalChars) * 100}%` 
+                    : `${(positionMillis / (durationMillis || 1)) * 100}%` 
+                }
+              ]} 
+            />
           </View>
           <View style={styles.timeRow}>
             <Text style={styles.timeText}>{formatTime(positionMillis)}</Text>
@@ -677,34 +762,45 @@ export default function DictationPracticeScreen() {
 
         <Card variant="default" style={styles.clozeContainer}>
           <View style={styles.clozeGrid}>
-            {wordParts.map((part, index) => (
-              <View key={part.id} style={styles.wordBox}>
-                {part.isBlank ? (
-                  <View>
-                    <TextInput
-                      style={[
-                        styles.wordInput,
-                        showResult && (part.userInput.trim().toLowerCase() === part.original.toLowerCase() ? styles.wordCorrect : styles.wordWrong)
-                      ]}
-                      value={part.userInput}
-                      onChangeText={(val) => {
-                        const updated = [...wordParts];
-                        updated[index].userInput = val;
-                        setWordParts(updated);
-                      }}
-                      autoCorrect={false}
-                      autoCapitalize="none"
-                      editable={!showResult}
-                    />
-                    {showResult && part.userInput.trim().toLowerCase() !== part.original.toLowerCase() && (
-                      <Text style={styles.answerText}>{part.original}</Text>
-                    )}
-                  </View>
-                ) : (
-                  <Text style={styles.plainText}>{part.display}</Text>
-                )}
-              </View>
-            ))}
+            {wordParts.map((part, index) => {
+              const isActive = isPlaying && 
+                part.charStart !== undefined && 
+                part.charEnd !== undefined && 
+                currentCharIndex >= part.charStart && 
+                currentCharIndex < part.charEnd + 2; // Tolerance for spaces
+
+              return (
+                <View key={part.id} style={[styles.wordBox, isActive && styles.activeWordBox]}>
+                  {part.isBlank ? (
+                    <View>
+                      <TextInput
+                        style={[
+                          styles.wordInput,
+                          isActive && styles.activeWordInput,
+                          showResult && (part.userInput.trim().toLowerCase() === part.original.toLowerCase() ? styles.wordCorrect : styles.wordWrong)
+                        ]}
+                        value={part.userInput}
+                        onChangeText={(val) => {
+                          const updated = [...wordParts];
+                          updated[index].userInput = val;
+                          setWordParts(updated);
+                        }}
+                        autoCorrect={false}
+                        autoCapitalize="none"
+                        editable={!showResult}
+                      />
+                      {showResult && part.userInput.trim().toLowerCase() !== part.original.toLowerCase() && (
+                        <Text style={styles.answerText}>{part.original}</Text>
+                      )}
+                    </View>
+                  ) : (
+                    <Text style={[styles.plainText, isActive && styles.activePlainText]}>
+                      {part.display}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
         </Card>
       </View>
@@ -1203,11 +1299,20 @@ const styles = StyleSheet.create({
   wordBox: {
     marginRight: 6,
     marginVertical: 4,
+    borderRadius: 4,
+  },
+  activeWordBox: {
+    backgroundColor: '#FFF1F2',
+    transform: [{ scale: 1.1 }],
   },
   plainText: {
     fontSize: 18,
     color: Colors.textPrimary,
     lineHeight: 28,
+  },
+  activePlainText: {
+    color: Colors.primary,
+    fontWeight: Typography.weights.extrabold,
   },
   wordInput: {
     minWidth: 40,
@@ -1219,6 +1324,11 @@ const styles = StyleSheet.create({
     height: 30,
     color: Colors.primary,
     fontWeight: Typography.weights.bold,
+  },
+  activeWordInput: {
+    borderBottomWidth: 3,
+    borderBottomColor: Colors.primary,
+    backgroundColor: '#FFF1F2',
   },
   wordCorrect: {
     borderBottomColor: '#10B981',

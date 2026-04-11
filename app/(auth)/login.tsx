@@ -18,8 +18,39 @@ import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme'
 
 const { width } = Dimensions.get('window');
 
+import { userRepo } from '@/db/repos/userRepo';
+
 export default function LoginScreen() {
   const router = useRouter();
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      alert('Vui lòng nhập thông tin đăng nhập');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Mock local check: fetch any user and compare email if needed, 
+      // or just check if the user exists in our local DB.
+      const user = await userRepo.getCurrentUser();
+      
+      if (user) {
+        // In a real app we'd verify password hash. For now, we simulate success.
+        router.replace('/(tabs)');
+      } else {
+        alert('Tài khoản không tồn tại. Vui lòng đăng ký.');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      alert('Lỗi đăng nhập');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -52,6 +83,8 @@ export default function LoginScreen() {
                   placeholderTextColor={Colors.textTertiary}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
                 />
              </View>
           </View>
@@ -65,6 +98,8 @@ export default function LoginScreen() {
                   placeholder="Nhập mật khẩu"
                   placeholderTextColor={Colors.textTertiary}
                   secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
                 />
                 <TouchableOpacity>
                   <Ionicons name="eye-outline" size={20} color={Colors.textTertiary} />
@@ -77,11 +112,12 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <Button 
-            title="Đăng nhập"
-            onPress={() => router.replace('/(tabs)')}
+            title={loading ? "Đang xử lý..." : "Đăng nhập"}
+            onPress={handleLogin}
             fullWidth
             size="lg"
             style={styles.loginBtn}
+            disabled={loading}
           />
 
           <View style={styles.orSection}>

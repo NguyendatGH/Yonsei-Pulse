@@ -1,30 +1,35 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-} from 'react-native';
+import { ActivityIndicator, View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Card, ProgressBar } from '@/components/ui';
+import { useRouter } from 'expo-router';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
-import { MOCK_DAILY_STATS, MOCK_USER } from '@/constants/mock-data';
+import { MOCK_DAILY_STATS } from '@/constants/mock-data';
+import { useStats } from '@/hooks/use-stats';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function StatsScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [period, setPeriod] = React.useState('Tuần');
+  const { stats, loading } = useStats();
+
+  if (loading || !stats) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7} onPress={() => router.back()}>
           <Ionicons name="chevron-back-outline" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Thống kê bài học</Text>
@@ -47,12 +52,12 @@ export default function StatsScreen() {
            />
            <View style={styles.statsHighlights}>
               <View style={styles.highlightItem}>
-                 <Text style={styles.highlightVal}>128</Text>
+                 <Text style={styles.highlightVal}>{stats.streak}</Text>
                  <Text style={styles.highlightLabel}>Ngày liên tiếp</Text>
               </View>
               <View style={styles.highlightDivider} />
               <View style={styles.highlightItem}>
-                 <Text style={styles.highlightVal}>1,240</Text>
+                 <Text style={styles.highlightVal}>{stats.xp.toLocaleString()}</Text>
                  <Text style={styles.highlightLabel}>Tổng kinh nghiệm</Text>
               </View>
            </View>
@@ -100,8 +105,8 @@ export default function StatsScreen() {
            <Text style={styles.sectionTitle}>Kỹ năng ngôn ngữ</Text>
            <View style={styles.progressGrid}>
               {[
-                { label: 'Từ vựng', val: 0.85, icon: 'book', color: Colors.primary },
-                { label: 'Ngữ pháp', val: 0.65, icon: 'library', color: '#2196F3' },
+                { label: 'Từ vựng', val: stats.vocabularyProgress, icon: 'book', color: Colors.primary },
+                { label: 'Ngữ pháp', val: stats.grammarProgress, icon: 'library', color: '#2196F3' },
                 { label: 'Phát âm', val: 0.75, icon: 'mic', color: '#4CAF50' },
               ].map((skill) => (
                 <View key={skill.label} style={styles.skillCard}>

@@ -53,9 +53,9 @@ export const MOCK_DAILY_STATS = {
 
 // ─── Quick Access Actions ────────────────────────────────────
 export const MOCK_QUICK_ACTIONS = [
-  { id: 'flashcards', title: 'Flashcards', icon: 'layers', color: '#EF5FA0', route: '/practice/lesson-setup' },
-  { id: 'listening', title: 'Luyện nghe', icon: 'headset', color: '#60A5FA', route: '/practice/lesson-setup' },
-  { id: 'grammar', title: 'Ngữ pháp', icon: 'book', color: '#34D399', route: '/(tabs)/library' },
+  { id: 'flashcards', title: 'Flashcards', icon: 'layers', color: '#EF5FA0', route: '/(tabs)/library?tab=flashcards' },
+  { id: 'listening', title: 'Luyện nghe', icon: 'headset', color: '#60A5FA', route: '/(tabs)/library?tab=listening' },
+  { id: 'grammar', title: 'Ngữ pháp', icon: 'book', color: '#34D399', route: '/(tabs)/library?tab=courses' },
   { id: 'custom', title: 'Tự soạn bài', icon: 'create', color: '#8B5CF6', route: '/practice/custom-dictation' },
   { id: 'exam', title: 'Thi thử', icon: 'medal', color: '#FBBF24', route: '/practice/exam' },
 ] as const;
@@ -111,12 +111,20 @@ export const MOCK_COURSES = [
 
 // ─── Lessons in a Course ─────────────────────────────────────
 export const MOCK_LESSONS = [
-  { id: 'l1', title: 'Bài 1: Giới thiệu bản thân', duration: '15 phút', completed: true, type: 'vocabulary' as const },
-  { id: 'l2', title: 'Bài 2: Chào hỏi', duration: '20 phút', completed: true, type: 'grammar' as const },
-  { id: 'l3', title: 'Bài 3: Gia đình', duration: '25 phút', completed: true, type: 'vocabulary' as const },
-  { id: 'l4', title: 'Bài 4: Mua sắm', duration: '20 phút', completed: false, type: 'mixed' as const, current: true },
-  { id: 'l5', title: 'Bài 5: Nhà hàng', duration: '20 phút', completed: false, type: 'vocabulary' as const },
-  { id: 'l6', title: 'Bài 6: Giao thông', duration: '25 phút', completed: false, type: 'grammar' as const },
+  // Lessons for Course 1 (Yonsei 1)
+  { id: 'l1', course_id: '1', title: 'Bài 1: Giới thiệu bản thân', duration: '15 phút', completed: true, type: 'vocabulary' as const },
+  { id: 'l2', course_id: '1', title: 'Bài 2: Chào hỏi & Làm quen', duration: '20 phút', completed: true, type: 'grammar' as const },
+  { id: 'l3', course_id: '1', title: 'Bài 3: Gia đình & Bạn bè', duration: '25 phút', completed: true, type: 'vocabulary' as const },
+  { id: 'l4', course_id: '1', title: 'Bài 4: Mua sắm tại chợ', duration: '20 phút', completed: false, type: 'mixed' as const, current: true },
+  { id: 'l5', course_id: '1', title: 'Bài 5: Đi nhà hàng xá', duration: '20 phút', completed: false, type: 'vocabulary' as const },
+  { id: 'l6', course_id: '1', title: 'Bài 6: Phương tiện giao thông', duration: '25 phút', completed: false, type: 'grammar' as const },
+  { id: 'l7', course_id: '1', title: 'Bài 7: Thời tiết & Bốn mùa', duration: '15 phút', completed: false, type: 'vocabulary' as const },
+  { id: 'l8', course_id: '1', title: 'Bài 8: Sở thích & Thời gian rảnh', duration: '30 phút', completed: false, type: 'mixed' as const },
+  
+  // Lessons for Course 2 (Yonsei 2)
+  { id: 'l2-1', course_id: '2', title: 'Bài 1: Cuộc sống trường học', duration: '20 phút', completed: false, type: 'vocabulary' as const },
+  { id: 'l2-2', course_id: '2', title: 'Bài 2: Đặt cuộc hẹn', duration: '20 phút', completed: false, type: 'grammar' as const },
+  { id: 'l2-3', course_id: '2', title: 'Bài 3: Tìm đường & Chỉ dẫn', duration: '30 phút', completed: false, type: 'mixed' as const },
 ] as const;
 
 // ─── Flashcard Sets ──────────────────────────────────────────
@@ -166,6 +174,15 @@ export const MOCK_FLASHCARD_SETS = [
     color: '#A78BFA',
     category: 'Đời sống',
   },
+  {
+    id: 'fs6',
+    title: 'Gia đình & Bản thân',
+    emoji: '👨‍👩‍👧‍👦',
+    totalCards: 15,
+    mastered: 0,
+    color: '#F472B6',
+    category: 'Cơ bản',
+  },
 ] as const;
 
 // ─── Individual Flashcards ───────────────────────────────────
@@ -175,6 +192,35 @@ export const MOCK_FLASHCARDS = [
   { id: 'fc3', korean: '밥', vietnamese: 'Cơm', pronunciation: 'bap', example: '밥을 먹어요', exampleVi: 'Tôi ăn cơm', mastered: false },
   { id: 'fc4', korean: '커피', vietnamese: 'Cà phê', pronunciation: 'keo-pi', example: '커피를 마셔요', exampleVi: 'Tôi uống cà phê', mastered: false },
   { id: 'fc5', korean: '김치', vietnamese: 'Kim chi', pronunciation: 'gim-chi', example: '김치를 좋아해요', exampleVi: 'Tôi thích kim chi', mastered: true },
+  { id: 'fc6', korean: '학교', vietnamese: 'Trường học', pronunciation: 'hak-gyo', example: '학교에 가요', exampleVi: 'Tôi đi đến trường', mastered: false },
+  { id: 'fc7', korean: '선생님', vietnamese: 'Giáo viên', pronunciation: 'seon-saeng-nim', example: '선생님을 만나요', exampleVi: 'Tôi gặp giáo viên', mastered: false },
+  { id: 'fc8', korean: '친구', vietnamese: 'Bạn bè', pronunciation: 'chin-gu', example: '친구와 놀아요', exampleVi: 'Tôi chơi cùng bạn', mastered: false },
+  { id: 'fc9', korean: '공부', vietnamese: 'Học tập', pronunciation: 'gong-bu', example: '도서관에서 공부해요', exampleVi: 'Tôi học ở thư viện', mastered: false },
+  { id: 'fc10', korean: '책', vietnamese: 'Sách', pronunciation: 'chaek', example: '책을 읽어요', exampleVi: 'Tôi đọc sách', mastered: false },
+] as const;
+
+export const MOCK_GRAMMAR = [
+  {
+    id: 'g1',
+    title: 'N + 입니다',
+    description: 'Dùng để giới thiệu danh từ, tương đương "là" trong tiếng Việt.',
+    example: '저는 학생입니다.',
+    explanation: 'Dùng trong tình huống trang trọng, lịch sự.',
+  },
+  {
+    id: 'g2',
+    title: 'N + 이/가',
+    description: 'Tiểu từ chủ ngữ.',
+    example: '날씨가 좋아요.',
+    explanation: 'Dùng để nhấn mạnh chủ ngữ trong câu.',
+  },
+  {
+    id: 'g3',
+    title: 'V + 아/어/여요',
+    description: 'Đuôi câu kết thúc thì hiện tại (lịch sự).',
+    example: '밥을 먹어요.',
+    explanation: 'Cách chia phụ thuộc vào nguyên âm cuối của gốc động từ.',
+  },
 ] as const;
 
 // ─── Listening Practice Paragraphs ───────────────────────────

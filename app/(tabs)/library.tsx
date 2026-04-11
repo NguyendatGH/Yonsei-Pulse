@@ -13,7 +13,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Card, ProgressBar, Badge } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
-import { MOCK_FLASHCARD_SETS, MOCK_COURSES, MOCK_LISTENING_PARAGRAPHS } from '@/constants/mock-data';
+import { useFlashcards } from '@/hooks/use-flashcards';
+import { useCourses } from '@/hooks/use-courses';
+import { MOCK_LISTENING_PARAGRAPHS } from '@/constants/mock-data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -25,9 +27,25 @@ const TABS: ReadonlyArray<{ id: TabId; label: string; icon: string }> = [
   { id: 'courses', label: 'Khóa học', icon: 'school' },
 ] as const;
 
+import { useRouter, useLocalSearchParams } from 'expo-router';
+
 export default function LibraryScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: TabId }>();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<TabId>('flashcards');
+  const [activeTab, setActiveTab] = useState<TabId>(params.tab || 'flashcards');
+  
+  // Update tab if params change
+  React.useEffect(() => {
+    if (params.tab) {
+      setActiveTab(params.tab);
+    }
+  }, [params.tab]);
+
+  const { sets, loading: flashcardsLoading } = useFlashcards();
+  const { courses, loading: coursesLoading } = useCourses();
+
+  const isLoading = flashcardsLoading || coursesLoading;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -87,9 +105,9 @@ export default function LibraryScreen() {
           </View>
         )}
 
-        {activeTab === 'flashcards' && <FlashcardSetsList />}
+        {activeTab === 'flashcards' && <FlashcardSetsList sets={sets} />}
         {activeTab === 'listening' && <ListeningList />}
-        {activeTab === 'courses' && <CoursesList />}
+        {activeTab === 'courses' && <CoursesList courses={courses} />}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -97,7 +115,8 @@ export default function LibraryScreen() {
   );
 }
 
-function FlashcardSetsList() {
+function FlashcardSetsList({ sets }: { sets: any[] }) {
+  const router = useRouter();
   return (
     <View style={styles.listContainer}>
       <View style={styles.sectionHeader}>
@@ -105,8 +124,12 @@ function FlashcardSetsList() {
         <TouchableOpacity><Text style={styles.seeAll}>Tất cả</Text></TouchableOpacity>
       </View>
 
-      {MOCK_FLASHCARD_SETS.map((set) => (
-        <TouchableOpacity key={set.id} activeOpacity={0.8}>
+      {sets.map((set) => (
+        <TouchableOpacity 
+          key={set.id} 
+          activeOpacity={0.8}
+          onPress={() => router.push({ pathname: '/practice/flashcards', params: { setId: set.id } })}
+        >
           <Card variant="elevated" style={styles.itemCard}>
             <View style={styles.cardMain}>
               <View style={[styles.iconBox, { backgroundColor: `${set.color}12` }]}>
@@ -140,14 +163,19 @@ function FlashcardSetsList() {
 }
 
 function ListeningList() {
+  const router = useRouter();
   return (
     <View style={styles.listContainer}>
        <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Bài luyện nghe</Text>
         <TouchableOpacity><Text style={styles.seeAll}>Lọc nhanh</Text></TouchableOpacity>
       </View>
-      {MOCK_LISTENING_PARAGRAPHS.map((p) => (
-        <TouchableOpacity key={p.id} activeOpacity={0.8}>
+      {MOCK_LISTENING_PARAGRAPHS.map((p, index) => (
+        <TouchableOpacity 
+          key={p.id} 
+          activeOpacity={0.8}
+          onPress={() => router.push({ pathname: '/practice/listening', params: { index: index.toString() } })}
+        >
            <Card variant="elevated" style={styles.itemCard}>
               <View style={styles.cardMain}>
                  <View style={styles.playIconContainer}>
@@ -177,14 +205,20 @@ function ListeningList() {
   );
 }
 
-function CoursesList() {
+function CoursesList({ courses }: { courses: any[] }) {
+  const router = useRouter();
   return (
     <View style={styles.listContainer}>
        <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Chương trình Yonsei</Text>
       </View>
-      {MOCK_COURSES.map((course) => (
-        <TouchableOpacity key={course.id} activeOpacity={0.8} disabled={course.locked}>
+      {courses.map((course) => (
+        <TouchableOpacity 
+          key={course.id} 
+          activeOpacity={0.8} 
+          disabled={course.locked}
+          onPress={() => router.push({ pathname: '/practice/lessons', params: { courseId: course.id } })}
+        >
            <Card variant="elevated" style={[styles.itemCard, course.locked && styles.lockedCard]}>
               <View style={styles.cardMain}>
                  <View style={[styles.iconBox, { backgroundColor: course.locked ? '#F3F4F6' : `${course.color}12` }]}>
