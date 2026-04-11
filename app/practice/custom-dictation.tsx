@@ -16,6 +16,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
+import * as Speech from 'expo-speech';
+import * as FileSystem from 'expo-file-system';
 import { Button, Card, ProgressBar, Badge } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
 import { MOCK_LISTENING_PARAGRAPHS } from '@/constants/mock-data';
@@ -328,6 +330,70 @@ export default function DictationPracticeScreen() {
     window.speechSynthesis.speak(utterance);
   };
 
+  const startMobileSpeech = (text: string, rate: number) => {
+    Speech.stop();
+    setCurrentCharIndex(0);
+    setPositionMillis(0);
+    hasReceivedBoundary.current = false;
+    playbackStartTime.current = Date.now();
+
+    const charCount = text.length;
+    setTotalChars(charCount);
+    const estimatedDuration = (charCount / (rate * 4.5)) * 1000; 
+    setDurationMillis(estimatedDuration);
+
+    Speech.speak(text, {
+      language: 'ko-KR',
+      rate: rate,
+      onStart: () => setIsPlaying(true),
+      onDone: () => {
+        setIsPlaying(false);
+        setCurrentCharIndex(text.length);
+        setPositionMillis(durationMillis);
+        if (positionIntervalRef.current) {
+          clearInterval(positionIntervalRef.current);
+          positionIntervalRef.current = null;
+        }
+        setTimeout(() => {
+          if (!isPlaying) {
+            setCurrentCharIndex(0);
+            setPositionMillis(0);
+          }
+        }, 1500);
+      },
+      onStopped: () => {
+        setIsPlaying(false);
+      },
+      onBoundary: (event: any) => {
+        hasReceivedBoundary.current = true;
+        setCurrentCharIndex(event.charIndex);
+        
+        const elapsed = Date.now() - playbackStartTime.current;
+        if (elapsed > 200 && event.charIndex > 0) {
+           const actualCPMS = event.charIndex / elapsed;
+           const newDuration = text.length / actualCPMS;
+           setDurationMillis(newDuration);
+           setPositionMillis(elapsed);
+        }
+      }
+    });
+
+    if (positionIntervalRef.current) clearInterval(positionIntervalRef.current);
+    positionIntervalRef.current = setInterval(() => {
+      setPositionMillis(prev => {
+        const next = prev + 100;
+        if (next >= estimatedDuration) return prev;
+        
+        if (!hasReceivedBoundary.current) {
+          const progress = next / estimatedDuration;
+          const fallbackCharIndex = Math.floor(progress * charCount);
+          setCurrentCharIndex(curr => Math.max(curr, fallbackCharIndex));
+        }
+        return next;
+      });
+    }, 100);
+  };
+
   const pauseWebSpeech = () => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.pause();
@@ -387,21 +453,20 @@ export default function DictationPracticeScreen() {
       return;
     }
 
-    if (!soundRef.current) {
-      if (selectedPara) await prepareAudio(selectedPara.text, speechRate);
-      setTimeout(() => soundRef.current?.playAsync(), 200);
-      return;
-    }
-    
-    if (isPlaying) {
-      await soundRef.current.pauseAsync();
-    } else {
-      const status: any = await soundRef.current.getStatusAsync();
-      if (status.positionMillis >= (status.durationMillis || 0) - 100) {
-        await soundRef.current.replayAsync();
+    if (Platform.OS !== 'web') {
+      if (isPlaying) {
+        Speech.stop();
+        setIsPlaying(false);
+        if (positionIntervalRef.current) {
+          clearInterval(positionIntervalRef.current);
+          positionIntervalRef.current = null;
+        }
       } else {
-        await soundRef.current.playAsync();
+        if (selectedPara) {
+          startMobileSpeech(selectedPara.text, speechRate);
+        }
       }
+      return;
     }
   };
 
@@ -422,11 +487,12 @@ export default function DictationPracticeScreen() {
         clearInterval(positionIntervalRef.current);
         positionIntervalRef.current = null;
       }
-    } else if (soundRef.current) {
-      try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.setPositionAsync(0);
-      } catch (e) {}
+    } else {
+      Speech.stop();
+      if (positionIntervalRef.current) {
+        clearInterval(positionIntervalRef.current);
+        positionIntervalRef.current = null;
+      }
     }
   };
 
