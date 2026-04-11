@@ -1,4 +1,4 @@
-# <img src="./assets/images/icon.png" width="40" /> HIHI - Học Tiếng Hàn Cùng Yonsei
+# <img src="./assets/images/icon.png" width="40" /> Yonsei Pulse - Cùng Học Tiếng Hàn 
 
 > Ứng dụng học ngôn ngữ tiếng Hàn với các tính năng luyện nghe, nói và từ vựng. Được xây dựng bằng React Native (Expo).
 
