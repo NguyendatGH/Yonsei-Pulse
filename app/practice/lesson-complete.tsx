@@ -1,13 +1,43 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
+import { courseRepo } from '@/db/repos/courseRepo';
+import { analytics } from '@/services/analytics';
+import { useUser } from '@/hooks/use-user';
+import { statsRepo } from '@/db/repos/statsRepo';
 
 export default function LessonCompleteScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const { addXp, updateStreak } = useUser();
+
+  // Read actual stats passed via params, fall back to defaults
+  const xpEarned = params.xp ? Number(params.xp) : 25;
+  const mastered = params.mastered !== undefined ? Number(params.mastered) : null;
+  const total = params.total ? Number(params.total) : null;
+  const timeTaken = (params.timeTaken as string) || '—';
+  const lessonId = params.lessonId as string;
+
+  React.useEffect(() => {
+    if (lessonId) {
+      courseRepo.completeLesson(lessonId).catch(console.error);
+      const earnedXp = mastered ? Number(mastered) * 10 : 50;
+      addXp(earnedXp);
+      updateStreak();
+      statsRepo.logActivity(15, earnedXp).catch(console.error); // Estimate 15 mins per lesson
+      analytics.trackLessonComplete(lessonId, 'unknown', earnedXp);
+    } else if (mastered !== null) {
+      analytics.trackFlashcardReview(Number(mastered), Number(total) || 0);
+    }
+  }, [lessonId, mastered, total]);
+
+  const accuracy = mastered !== null && total !== null && total > 0
+    ? Math.round((mastered / total) * 100)
+    : 95;
 
   return (
     <View style={styles.container}>
@@ -24,23 +54,27 @@ export default function LessonCompleteScreen() {
 
           <View style={styles.textSection}>
             <Text style={styles.title}>Tuyệt vời!</Text>
-            <Text style={styles.subtitle}>Bạn vừa hoàn thành một bài luyện tập mới. Cùng xem thành tích nhé!</Text>
+            <Text style={styles.subtitle}>
+              {mastered !== null && total !== null
+                ? `Bạn đã thuộc ${mastered}/${total} thẻ trong phiên này. Cùng xem thành tích nhé!`
+                : 'Bạn vừa hoàn thành một bài luyện tập mới. Cùng xem thành tích nhé!'}
+            </Text>
           </View>
 
           <Card variant="elevated" style={styles.statsCard}>
             <View style={styles.statContainer}>
               <Text style={styles.statLabel}>Kinh nghiệm</Text>
-              <Text style={styles.statValue}>+25 XP</Text>
+              <Text style={styles.statValue}>+{xpEarned} XP</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statContainer}>
               <Text style={styles.statLabel}>Độ chính xác</Text>
-              <Text style={styles.statValue}>95%</Text>
+              <Text style={styles.statValue}>{accuracy}%</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statContainer}>
               <Text style={styles.statLabel}>Thời gian</Text>
-              <Text style={styles.statValue}>4:32</Text>
+              <Text style={styles.statValue}>{timeTaken}</Text>
             </View>
           </Card>
 

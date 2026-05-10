@@ -82,16 +82,26 @@ export default function StatsScreen() {
 
            <Card variant="elevated" style={styles.chartCard}>
               <View style={styles.chartHeaderInfo}>
-                 <Text style={styles.chartTotal}>420 phút</Text>
-                 <Text style={styles.chartPeriod}>Tuần này (12/05 - 18/05)</Text>
+                 <Text style={styles.chartTotal}>
+                   {period === 'Tuần' ? '420 phút' : period === 'Ngày' ? '45 phút' : '1,250 phút'}
+                 </Text>
+                 <Text style={styles.chartPeriod}>
+                   {period === 'Tuần' 
+                     ? `Tuần này (${new Date().getDate() - new Date().getDay() + 1}/${new Date().getMonth() + 1} - ${new Date().getDate() - new Date().getDay() + 7}/${new Date().getMonth() + 1})`
+                     : period === 'Ngày' 
+                     ? `Hôm nay (${new Date().getDate()}/${new Date().getMonth() + 1})`
+                     : `Tháng này (Tháng ${new Date().getMonth() + 1})`}
+                 </Text>
               </View>
               <View style={styles.barsContainer}>
-                 {MOCK_DAILY_STATS.weeklyData.map((d, i) => {
-                   const isToday = i === 5;
-                   const height = 30 + (d.minutes / 120) * 100;
+                 {(period === 'Tuần' ? MOCK_DAILY_STATS.weeklyData : period === 'Ngày' ? MOCK_DAILY_STATS.weeklyData.slice(0, 1) : [
+                   { day: 'T1', minutes: 120 }, { day: 'T2', minutes: 150 }, { day: 'T3', minutes: 200 }, { day: 'T4', minutes: 180 }
+                 ]).map((d, i, arr) => {
+                   const isToday = i === arr.length - 1;
+                   const height = 30 + (d.minutes / 250) * 100;
                    return (
                      <View key={d.day} style={styles.barCol}>
-                        <View style={[styles.bar, { height: `${height}%` }, isToday && styles.barActive]} />
+                        <View style={[styles.bar, { height: `${Math.min(height, 100)}%` }, isToday && styles.barActive]} />
                         <Text style={[styles.barDay, isToday && styles.barDayActive]}>{d.day}</Text>
                      </View>
                    );
@@ -107,7 +117,7 @@ export default function StatsScreen() {
               {[
                 { label: 'Từ vựng', val: stats.vocabularyProgress, icon: 'book', color: Colors.primary },
                 { label: 'Ngữ pháp', val: stats.grammarProgress, icon: 'library', color: '#2196F3' },
-                { label: 'Phát âm', val: 0.75, icon: 'mic', color: '#4CAF50' },
+                { label: 'Phát âm', val: (stats.vocabularyProgress + stats.grammarProgress) / 2 || 0, icon: 'mic', color: '#4CAF50' },
               ].map((skill) => (
                 <View key={skill.label} style={styles.skillCard}>
                    <View style={[styles.skillIconBox, { backgroundColor: `${skill.color}15` }]}>
@@ -133,11 +143,11 @@ export default function StatsScreen() {
            </View>
            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.achievementsRow}>
               {[
-                { label: 'Siêu sao', icon: 'star', color: Colors.primary, bg: '#FFF0F3' },
-                { label: 'Nhiệt huyết', icon: 'flame', color: '#FFA000', bg: '#FFF8E1' },
-                { label: 'Tri thức', icon: 'book', color: '#4CAF50', bg: '#E8F5E9' },
-                { label: 'Phản xạ', icon: 'flash', color: '#2196F3', bg: '#E3F2FD' },
-              ].map((item) => (
+                { label: 'Siêu sao', icon: 'star', color: Colors.primary, bg: '#FFF0F3', req: 500 },
+                { label: 'Nhiệt huyết', icon: 'flame', color: '#FFA000', bg: '#FFF8E1', req: 100 },
+                { label: 'Tri thức', icon: 'book', color: '#4CAF50', bg: '#E8F5E9', req: 50 },
+                { label: 'Phản xạ', icon: 'flash', color: '#2196F3', bg: '#E3F2FD', req: 10 },
+              ].filter(a => stats.xp >= a.req).map((item) => (
                 <TouchableOpacity key={item.label} style={styles.achievementBadge} activeOpacity={0.8}>
                    <View style={[styles.badgeIconBox, { backgroundColor: item.bg }]}>
                       <Ionicons name={`${item.icon}-outline` as any} size={28} color={item.color} />

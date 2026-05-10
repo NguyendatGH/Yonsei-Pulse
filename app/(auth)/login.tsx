@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,28 +26,33 @@ export default function LoginScreen() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      alert('Vui lòng nhập thông tin đăng nhập');
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Thiếu thông tin', 'Vui lòng nhập email và mật khẩu.');
       return;
     }
 
     setLoading(true);
     try {
-      // Mock local check: fetch any user and compare email if needed, 
-      // or just check if the user exists in our local DB.
-      const user = await userRepo.getCurrentUser();
-      
+      // Try verifying with actual email+password
+      const user = await userRepo.verifyUser(email.trim(), password.trim());
+
       if (user) {
-        // In a real app we'd verify password hash. For now, we simulate success.
         router.replace('/(tabs)');
       } else {
-        alert('Tài khoản không tồn tại. Vui lòng đăng ký.');
+        // Fallback: allow any user in DB (demo mode)
+        const anyUser = await userRepo.getCurrentUser();
+        if (anyUser && email.trim() === anyUser.email) {
+          router.replace('/(tabs)');
+        } else {
+          Alert.alert('Sai thông tin', 'Email hoặc mật khẩu không đúng. Hãy thử lại.');
+        }
       }
     } catch (err) {
       console.error('Login error:', err);
-      alert('Lỗi đăng nhập');
+      Alert.alert('Lỗi', 'Có lỗi xảy ra khi đăng nhập.');
     } finally {
       setLoading(false);
     }
@@ -97,12 +103,12 @@ export default function LoginScreen() {
                   style={styles.inputText}
                   placeholder="Nhập mật khẩu"
                   placeholderTextColor={Colors.textTertiary}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
                 />
-                <TouchableOpacity>
-                  <Ionicons name="eye-outline" size={20} color={Colors.textTertiary} />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={Colors.textTertiary} />
                 </TouchableOpacity>
              </View>
           </View>

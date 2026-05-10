@@ -16,15 +16,18 @@ import * as Haptics from 'expo-haptics';
 import { ProgressBar } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
 import { useFlashcards } from '@/hooks/use-flashcards';
+import { userRepo } from '@/db/repos/userRepo';
 
 export default function FlashcardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { setId } = useLocalSearchParams<{ setId: string }>();
+  const { setId, lessonId } = useLocalSearchParams<{ setId: string; lessonId: string }>();
   
   const { cards, loading, markMastered } = useFlashcards(setId || 'fs1');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [masteredCount, setMasteredCount] = useState(0);
+  const [sessionStart] = useState(Date.now());
   const flipAnim = React.useRef(new Animated.Value(0)).current;
 
   // Speak function
@@ -69,8 +72,10 @@ export default function FlashcardScreen() {
     if (mastered) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await markMastered(currentCard.id, true);
+      setMasteredCount(prev => prev + 1);
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await markMastered(currentCard.id, false);
     }
 
     if (currentIndex < cards.length - 1) {
@@ -78,7 +83,34 @@ export default function FlashcardScreen() {
       setIsFlipped(false);
       flipAnim.setValue(0);
     } else {
-      router.push('/practice/lesson-complete');
+      // Persist XP and todayWords
+      const newMastered = mastered ? masteredCount + 1 : masteredCount;
+      const xpEarned = newMastered * 5 + 10; // 5 XP per card + 10 base
+      const elapsedSec = Math.round((Date.now() - sessionStart) / 1000);
+      const mm = Math.floor(elapsedSec / 60);
+      const ss = elapsedSec % 60;
+      const timeTaken = `${mm.toString().padStart(2,'0')}:${ss.toString().padStart(2,'0')}`;
+
+      try {
+        const user = await userRepo.getCurrentUser();
+        if (user) {
+          await userRepo.updateXp(user.id, xpEarned);
+          await userRepo.updateTodayWords(user.id, newMastered);
+        }
+      } catch (e) {
+        console.error('Failed to update user stats', e);
+      }
+
+      router.push({
+        pathname: '/practice/lesson-complete',
+        params: {
+          xp: xpEarned,
+          mastered: newMastered,
+          total: cards.length,
+          timeTaken,
+          lessonId,
+        }
+      });
     }
   };
 

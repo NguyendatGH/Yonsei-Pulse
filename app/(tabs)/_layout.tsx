@@ -3,22 +3,25 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Radius, Spacing, Shadows, Typography } from '@/constants/theme';
+import { Colors, Radius, Spacing, Shadows, Typography, DarkColors } from '@/constants/theme';
 import { HapticTab } from '@/components/haptic-tab';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function TabLayout() {
+  const { theme, isDark } = useTheme();
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textTertiary,
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textTertiary,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarShowLabel: true,
         tabBarStyle: {
-          backgroundColor: Colors.white,
+          backgroundColor: theme.white,
           borderTopWidth: 1,
-          borderTopColor: '#F1F5F9',
+          borderTopColor: isDark ? theme.border : '#F1F5F9',
           height: Platform.OS === 'ios' ? 105 : 80,
           paddingTop: 12,
           paddingBottom: Platform.OS === 'ios' ? 35 : 12,

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { Colors, DarkColors } from '@/constants/theme';
 
 import { initDb } from '@/db/client';
 import { seedDb } from '@/db/seed';
@@ -50,7 +50,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.white } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colorScheme === 'dark' ? DarkColors.background : Colors.white } }}>
         {/* Auth Group */}
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
 

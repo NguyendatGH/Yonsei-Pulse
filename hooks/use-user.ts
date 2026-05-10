@@ -32,11 +32,22 @@ export function useUser() {
     }
   };
 
+  const updateStreak = async () => {
+    if (!user) return;
+    try {
+      await userRepo.checkAndUpdateStreak(user.id);
+      await fetchUser();
+    } catch (err) {
+      console.error('Failed to update streak:', err);
+    }
+  };
+
   return {
     user,
     loading,
     error,
     addXp,
+    updateStreak,
     refreshUser: fetchUser
   };
 }

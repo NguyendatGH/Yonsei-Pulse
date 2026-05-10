@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   Dimensions,
+  Alert,
 } from 'react-native';
+import * as Speech from 'expo-speech';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +25,55 @@ export default function ListeningScreen() {
   const [currentIdx, setCurrentIdx] = useState(initialIndex);
   const data = MOCK_LISTENING_PARAGRAPHS[currentIdx] || MOCK_LISTENING_PARAGRAPHS[0];
 
+  const [answers, setAnswers] = useState<string[]>(new Array(data.hiddenWords?.length || 0).fill(''));
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+
+  const handlePlayAudio = async () => {
+    if (isPlaying) {
+      Speech.stop();
+      setIsPlaying(false);
+      return;
+    }
+    
+    setIsPlaying(true);
+    Speech.speak(data.fullKorean, {
+      language: 'ko-KR',
+      rate: 0.8,
+      onDone: () => setIsPlaying(false),
+      onStopped: () => setIsPlaying(false),
+      onError: () => setIsPlaying(false),
+    });
+  };
+
+  const checkAnswers = () => {
+    if (!data.hiddenWords) {
+      router.push('/practice/lesson-complete');
+      return;
+    }
+
+    const allCorrect = data.hiddenWords.every(
+      (word, idx) => answers[idx]?.trim().toLowerCase() === word.toLowerCase()
+    );
+
+    if (allCorrect) {
+      router.push('/practice/lesson-complete');
+    } else {
+      Alert.alert('Chưa chính xác', 'Hãy nghe lại và kiểm tra kỹ các từ còn thiếu nhé!');
+    }
+  };
+
+  const updateAnswer = (text: string, index: number) => {
+    const newAnswers = [...answers];
+    newAnswers[index] = text;
+    setAnswers(newAnswers);
+  };
+
   const renderContent = () => {
     const parts = data.korean.split('___');
     return (
@@ -36,6 +87,8 @@ export default function ListeningScreen() {
                 placeholder="..."
                 placeholderTextColor={Colors.textTertiary}
                 autoCapitalize="none"
+                value={answers[index] || ''}
+                onChangeText={(text) => updateAnswer(text, index)}
               />
             )}
           </React.Fragment>
@@ -66,8 +119,8 @@ export default function ListeningScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Card variant="elevated" style={styles.audioCard}>
           <View style={styles.audioRow}>
-             <TouchableOpacity style={styles.mainPlayBtn}>
-                <Ionicons name="pause" size={32} color={Colors.white} />
+             <TouchableOpacity style={styles.mainPlayBtn} onPress={handlePlayAudio}>
+                <Ionicons name={isPlaying ? "pause" : "play"} size={32} color={Colors.white} />
              </TouchableOpacity>
              <View style={styles.audioInfoCol}>
                 <Text style={styles.audioTitle}>{data.title}</Text>
@@ -99,7 +152,7 @@ export default function ListeningScreen() {
 
         <Button
           title="Kiểm tra kết quả"
-          onPress={() => router.push('/practice/lesson-complete')}
+          onPress={checkAnswers}
           fullWidth
           size="lg"
           style={styles.submitBtn}

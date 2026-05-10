@@ -18,6 +18,7 @@ export const initDb = async () => {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       email TEXT,
+      password TEXT,
       avatar TEXT,
       level TEXT,
       xp INTEGER DEFAULT 0,
@@ -26,7 +27,8 @@ export const initDb = async () => {
       todayWords INTEGER DEFAULT 0,
       totalWords INTEGER DEFAULT 0,
       totalStudyMinutes INTEGER DEFAULT 0,
-      completedLessons INTEGER DEFAULT 0
+      completedLessons INTEGER DEFAULT 0,
+      lastStudyDate TEXT
     );
   `);
 
@@ -84,6 +86,10 @@ export const initDb = async () => {
       example TEXT,
       exampleVi TEXT,
       mastered INTEGER DEFAULT 0,
+      review_at TEXT,
+      interval INTEGER DEFAULT 1,
+      ease_factor REAL DEFAULT 2.5,
+      repetitions INTEGER DEFAULT 0,
       FOREIGN KEY (set_id) REFERENCES flashcard_sets (id) ON DELETE CASCADE
     );
   `);
@@ -98,4 +104,32 @@ export const initDb = async () => {
       content TEXT
     );
   `);
+
+  // Create Daily Stats Table
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS daily_stats (
+      date TEXT PRIMARY KEY,
+      minutes INTEGER DEFAULT 0,
+      xp INTEGER DEFAULT 0,
+      words_learned INTEGER DEFAULT 0
+    );
+  `);
+
+  // Migration: Add missing columns to flashcards table
+  await migrateFlashcardsTable(db);
 };
+
+async function migrateFlashcardsTable(db: Awaited<ReturnType<typeof getDb>>) {
+  try {
+    await db.execAsync('ALTER TABLE flashcards ADD COLUMN review_at TEXT');
+  } catch {}
+  try {
+    await db.execAsync('ALTER TABLE flashcards ADD COLUMN interval INTEGER DEFAULT 1');
+  } catch {}
+  try {
+    await db.execAsync('ALTER TABLE flashcards ADD COLUMN ease_factor REAL DEFAULT 2.5');
+  } catch {}
+  try {
+    await db.execAsync('ALTER TABLE flashcards ADD COLUMN repetitions INTEGER DEFAULT 0');
+  } catch {}
+}

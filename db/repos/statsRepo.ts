@@ -1,5 +1,12 @@
 import { getDb } from '../client';
 
+export interface DailyActivity {
+  date: string;
+  day: string;
+  minutes: number;
+  xp: number;
+}
+
 export interface UserStats {
   xp: number;
   streak: number;
@@ -9,6 +16,8 @@ export interface UserStats {
   completedLessons: number;
   vocabularyProgress: number;
   grammarProgress: number;
+  weeklyActivity: DailyActivity[];
+  totalMinutes: number;
 }
 
 export const statsRepo = {
@@ -28,6 +37,30 @@ export const statsRepo = {
       'SELECT COUNT(*) as total, SUM(completed) as completed FROM lessons'
     );
 
+    // Get Daily Activity for the last 7 days
+    const dailyRows = await db.getAllAsync<{ date: string, minutes: number, xp: number }>(
+      'SELECT date, minutes, xp FROM daily_stats ORDER BY date DESC LIMIT 7'
+    );
+
+    const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const weeklyActivity: DailyActivity[] = [];
+    
+    // Fill in last 7 days (simplified for now)
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const row = dailyRows.find(r => r.date === dateStr);
+      weeklyActivity.push({
+        date: dateStr,
+        day: days[d.getDay()],
+        minutes: row?.minutes || 0,
+        xp: row?.xp || 0
+      });
+    }
+
+    const totalMinutes = weeklyActivity.reduce((acc, curr) => acc + curr.minutes, 0);
+
     const totalFlashcards = flashcardStats?.total || 0;
     const masteredFlashcards = flashcardStats?.mastered || 0;
     const totalLessons = lessonStats?.total || 0;
@@ -42,6 +75,18 @@ export const statsRepo = {
       completedLessons,
       vocabularyProgress: totalFlashcards > 0 ? masteredFlashcards / totalFlashcards : 0,
       grammarProgress: totalLessons > 0 ? completedLessons / totalLessons : 0,
+      weeklyActivity,
+      totalMinutes,
     };
+  },
+
+  async logActivity(minutes: number, xp: number): Promise<void> {
+    const db = await getDb();
+    const today = new Date().toISOString().split('T')[0];
+    await db.runAsync(
+      `INSERT INTO daily_stats (date, minutes, xp) VALUES (?, ?, ?)
+       ON CONFLICT(date) DO UPDATE SET minutes = minutes + ?, xp = xp + ?`,
+      [today, minutes, xp, minutes, xp]
+    );
   }
 };

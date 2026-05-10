@@ -33,6 +33,16 @@ export const courseRepo = {
     }));
   },
 
+  async getCourseById(id: string): Promise<Course | null> {
+    const db = await getDb();
+    const row = await db.getFirstAsync<any>('SELECT * FROM courses WHERE id = ?', [id]);
+    if (!row) return null;
+    return {
+      ...row,
+      locked: !!row.locked
+    };
+  },
+
   async getLessons(courseId: string): Promise<Lesson[]> {
     const db = await getDb();
     const rows = await db.getAllAsync<any>('SELECT * FROM lessons WHERE course_id = ?', [courseId]);

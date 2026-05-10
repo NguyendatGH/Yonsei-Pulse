@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,10 +16,11 @@ import { Card, ProgressBar, Badge } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
 import { useUser } from '@/hooks/use-user';
 import { useCourses } from '@/hooks/use-courses';
+import { useTheme } from '@/hooks/use-theme';
 import {
   MOCK_DAILY_STATS,
   MOCK_QUICK_ACTIONS,
-  MOCK_CULTURE_TIP,
+  MOCK_CULTURE_TIPS,
 } from '@/constants/mock-data';
 import { Image } from 'expo-image';
 
@@ -29,16 +31,41 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user, loading: userLoading } = useUser();
   const { courses, loading: coursesLoading } = useCourses();
+  const { theme, isDark } = useTheme();
 
-  if (userLoading || coursesLoading || !user || courses.length === 0) {
-    return null; // Or a loading spinner
+  const getDayOfYear = (date: Date) => {
+    const start = new Date(date.getFullYear(), 0, 0);
+    const diff = date.getTime() - start.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    return Math.floor(diff / oneDay);
+  };
+
+  const tipIndex = getDayOfYear(new Date()) % MOCK_CULTURE_TIPS.length;
+  const cultureTip = MOCK_CULTURE_TIPS[tipIndex];
+
+  const getGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'CHÀO BUỔI SÁNG';
+    if (hour >= 12 && hour < 18) return 'CHÀO BUỔI CHIỀU';
+    if (hour >= 18 && hour < 22) return 'CHÀO BUỔI TỐI';
+    return 'CHÀO BUỔI ĐÊM';
+  };
+
+  if (userLoading || coursesLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
   }
 
-  // Find the active course (mock logic: course with index 1 or current progression)
-  const activeCourse = courses[1] || courses[0];
+  if (!user || courses.length === 0) return null;
+
+  // Find the active course: prefer in-progress, else first unlocked
+  const activeCourse = courses.find(c => c.progress > 0 && c.progress < 1) || courses.find(c => !c.locked) || courses[0];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
@@ -57,7 +84,7 @@ export default function HomeScreen() {
            >
               <View style={styles.headerTop}>
                  <View>
-                    <Text style={styles.bannerSub}>CHÀO BUỔI SÁNG</Text>
+                    <Text style={styles.bannerSub}>{getGreeting()}</Text>
                     <Text style={styles.bannerMain}>An-nyeong, {user.name}! ✨</Text>
                  </View>
                  <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.8}>
@@ -196,9 +223,9 @@ export default function HomeScreen() {
                     <Ionicons name="bulb" size={24} color={Colors.primary} />
                  </View>
                  <View style={{ flex: 1 }}>
-                    <Text style={styles.tipTitle}>{MOCK_CULTURE_TIP.title}</Text>
+                    <Text style={styles.tipTitle}>{cultureTip.title}</Text>
                     <Text style={styles.tipDesc} numberOfLines={2}>
-                       {MOCK_CULTURE_TIP.description} Khám phá những điều thú vị về văn hóa Hàn Quốc ngay bây giờ!
+                       {cultureTip.description}
                     </Text>
                  </View>
               </View>
@@ -214,6 +241,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FAF9FB',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#FAF9FB',
   },
   scrollContent: {

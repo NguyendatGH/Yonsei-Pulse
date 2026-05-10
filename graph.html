@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codebase Graph</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    padding: 12px 20px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #58a6ff;
+    letter-spacing: 0.5px;
+  }
+
+  .stats {
+    font-size: 12px;
+    color: #8b949e;
+    margin-left: auto;
+    display: flex;
+    gap: 16px;
+  }
+
+  .stat { display: flex; align-items: center; gap: 4px; }
+  .stat-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .controls {
+    padding: 8px 20px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  input[type="text"] {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    width: 200px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus { border-color: #58a6ff; }
+  input[type="text"]::placeholder { color: #484f58; }
+
+  button {
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  button:hover { background: #30363d; border-color: #58a6ff; color: #58a6ff; }
+  button.active { background: #1f6feb; border-color: #58a6ff; color: #fff; }
+
+  .mode-group {
+    display: flex;
+    gap: 4px;
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1px solid #30363d;
+  }
+
+  .mode-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  #graph-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #graph { width: 100%; height: 100%; }
+
+  #tooltip {
+    position: absolute;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    pointer-events: none;
+    display: none;
+    max-width: 350px;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  #tooltip .tip-name {
+    color: #58a6ff;
+    font-weight: 600;
+    margin-bottom: 4px;
+    word-break: break-all;
+  }
+
+  #tooltip .tip-type {
+    font-size: 10px;
+    color: #d29922;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  #tooltip .tip-info { color: #8b949e; font-size: 11px; }
+
+  #info-panel {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 14px;
+    width: 280px;
+    display: none;
+    font-size: 12px;
+    z-index: 50;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  #info-panel h3 {
+    color: #58a6ff;
+    font-size: 13px;
+    margin-bottom: 8px;
+    word-break: break-all;
+  }
+
+  #info-panel .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    color: #8b949e;
+  }
+
+  #info-panel .info-row span:last-child { color: #e6edf3; }
+
+  #info-panel h4 {
+    color: #3fb950;
+    font-size: 11px;
+    margin: 10px 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  #info-panel .dep-item {
+    color: #8b949e;
+    font-size: 11px;
+    padding: 2px 0;
+    border-bottom: 1px solid #21262d;
+    word-break: break-all;
+  }
+
+  #info-panel .dep-file {
+    color: #58a6ff;
+  }
+
+  .legend {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #8b949e;
+    z-index: 50;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .legend-item:last-child { margin-bottom: 0; }
+
+  .legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-shape {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⬡ Codebase Graph</h1>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Tìm file/function...">
+  <button onclick="resetView()">↺ Reset view</button>
+  <button id="btn-physics" class="active" onclick="togglePhysics()">⚡ Physics</button>
+  <button onclick="focusHighDegree()">★ Hub nodes</button>
+  <button onclick="exportPNG()">↓ PNG</button>
+  
+  <div class="mode-group">
+    <button id="mode-file" class="mode-btn active" onclick="setMode('file')">Files</button>
+    <button id="mode-func" class="mode-btn" onclick="setMode('func')">Functions</button>
+    <button id="mode-hybrid" class="mode-btn" onclick="setMode('hybrid')">Hybrid</button>
+  </div>
+</div>
+
+<div id="graph-container">
+  <div id="graph"></div>
+  <div id="tooltip"></div>
+  <div id="info-panel"></div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-shape" style="background:#58a6ff"></div> File</div>
+    <div class="legend-item"><div class="legend-shape" style="background:#3fb950"></div> Function</div>
+    <div class="legend-item"><div class="legend-shape" style="background:#d29922"></div> Hook/Component</div>
+    <div class="legend-item"><div class="legend-color" style="background:#f85149"></div> Import</div>
+    <div class="legend-item"><div class="legend-color" style="background:#a371f7"></div> Call</div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+// ═══════════════════════════════════════════════
+// DATA — được agent điền vào
+// ═══════════════════════════════════════════════
+const FILE_NODES = [
+  { "id": "app/(auth)/login.tsx", "label": "app/(auth)/login.tsx" },
+  { "id": "app/(auth)/otp.tsx", "label": "app/(auth)/otp.tsx" },
+  { "id": "app/(auth)/signup.tsx", "label": "app/(auth)/signup.tsx" },
+  { "id": "app/(auth)/success.tsx", "label": "app/(auth)/success.tsx" },
+  { "id": "app/(tabs)/index.tsx", "label": "app/(tabs)/index.tsx" },
+  { "id": "app/(tabs)/library.tsx", "label": "app/(tabs)/library.tsx" },
+  { "id": "app/(tabs)/profile.tsx", "label": "app/(tabs)/profile.tsx" },
+  { "id": "app/(tabs)/stats.tsx", "label": "app/(tabs)/stats.tsx" },
+  { "id": "app/practice/lessons.tsx", "label": "app/practice/lessons.tsx" },
+  { "id": "app/practice/exam.tsx", "label": "app/practice/exam.tsx" },
+  { "id": "app/practice/flashcards.tsx", "label": "app/practice/flashcards.tsx" },
+  { "id": "app/practice/grammar.tsx", "label": "app/practice/grammar.tsx" },
+  { "id": "app/practice/listening.tsx", "label": "app/practice/listening.tsx" },
+  { "id": "app/practice/custom-dictation.tsx", "label": "app/practice/custom-dictation.tsx" },
+  { "id": "app/practice/exam-result.tsx", "label": "app/practice/exam-result.tsx" },
+  { "id": "app/practice/lesson-complete.tsx", "label": "app/practice/lesson-complete.tsx" },
+  { "id": "app/practice/lesson-setup.tsx", "label": "app/practice/lesson-setup.tsx" },
+  { "id": "components/ui/button.tsx", "label": "components/ui/button.tsx" },
+  { "id": "components/ui/card.tsx", "label": "components/ui/card.tsx" },
+  { "id": "components/ui/progress-bar.tsx", "label": "components/ui/progress-bar.tsx" },
+  { "id": "components/ui/badge.tsx", "label": "components/ui/badge.tsx" },
+  { "id": "components/ui/index.ts", "label": "components/ui/index.ts" },
+  { "id": "constants/theme.ts", "label": "constants/theme.ts" },
+  { "id": "constants/mock-data.ts", "label": "constants/mock-data.ts" },
+  { "id": "hooks/use-user.ts", "label": "hooks/use-user.ts" },
+  { "id": "hooks/use-courses.ts", "label": "hooks/use-courses.ts" },
+  { "id": "hooks/use-lessons.ts", "label": "hooks/use-lessons.ts" },
+  { "id": "hooks/use-flashcards.ts", "label": "hooks/use-flashcards.ts" },
+  { "id": "hooks/use-grammar.ts", "label": "hooks/use-grammar.ts" },
+  { "id": "hooks/use-stats.ts", "label": "hooks/use-stats.ts" },
+  { "id": "hooks/use-theme-color.ts", "label": "hooks/use-theme-color.ts" },
+  { "id": "hooks/use-color-scheme.ts", "label": "hooks/use-color-scheme.ts" },
+  { "id": "db/client.ts", "label": "db/client.ts" },
+  { "id": "db/repos/userRepo.ts", "label": "db/repos/userRepo.ts" },
+  { "id": "db/repos/courseRepo.ts", "label": "db/repos/courseRepo.ts" },
+  { "id": "db/repos/flashcardRepo.ts", "label": "db/repos/flashcardRepo.ts" },
+  { "id": "db/repos/grammarRepo.ts", "label": "db/repos/grammarRepo.ts" },
+  { "id": "db/repos/statsRepo.ts", "label": "db/repos/statsRepo.ts" }
+];
+
+const FUNC_NODES = [
+  // login.tsx functions
+  { "id": "app/(auth)/login.tsx:LoginScreen", "label": "app/(auth)/login.tsx:LoginScreen", "type": "component" },
+  { "id": "app/(auth)/login.tsx:handleLogin", "label": "app/(auth)/login.tsx:handleLogin", "type": "function" },
+  
+  // signup.tsx functions
+  { "id": "app/(auth)/signup.tsx:SignupScreen", "label": "app/(auth)/signup.tsx:SignupScreen", "type": "component" },
+  { "id": "app/(auth)/signup.tsx:handleSignup", "label": "app/(auth)/signup.tsx:handleSignup", "type": "function" },
+  
+  // otp.tsx functions
+  { "id": "app/(auth)/otp.tsx:OTPScreen", "label": "app/(auth)/otp.tsx:OTPScreen", "type": "component" },
+  
+  // success.tsx functions
+  { "id": "app/(auth)/success.tsx:SuccessScreen", "label": "app/(auth)/success.tsx:SuccessScreen", "type": "component" },
+  
+  // index.tsx (Home) functions
+  { "id": "app/(tabs)/index.tsx:HomeScreen", "label": "app/(tabs)/index.tsx:HomeScreen", "type": "component" },
+  
+  // library.tsx functions
+  { "id": "app/(tabs)/library.tsx:LibraryScreen", "label": "app/(tabs)/library.tsx:LibraryScreen", "type": "component" },
+  { "id": "app/(tabs)/library.tsx:FlashcardSetsList", "label": "app/(tabs)/library.tsx:FlashcardSetsList", "type": "function" },
+  { "id": "app/(tabs)/library.tsx:ListeningList", "label": "app/(tabs)/library.tsx:ListeningList", "type": "function" },
+  { "id": "app/(tabs)/library.tsx:CoursesList", "label": "app/(tabs)/library.tsx:CoursesList", "type": "function" },
+  
+  // profile.tsx functions
+  { "id": "app/(tabs)/profile.tsx:ProfileScreen", "label": "app/(tabs)/profile.tsx:ProfileScreen", "type": "component" },
+  { "id": "app/(tabs)/profile.tsx:SettingItem", "label": "app/(tabs)/profile.tsx:SettingItem", "type": "function" },
+  
+  // stats.tsx functions
+  { "id": "app/(tabs)/stats.tsx:StatsScreen", "label": "app/(tabs)/stats.tsx:StatsScreen", "type": "component" },
+  
+  // lessons.tsx functions
+  { "id": "app/practice/lessons.tsx:LessonsScreen", "label": "app/practice/lessons.tsx:LessonsScreen", "type": "component" },
+  
+  // exam.tsx functions
+  { "id": "app/practice/exam.tsx:ExamScreen", "label": "app/practice/exam.tsx:ExamScreen", "type": "component" },
+  { "id": "app/practice/exam.tsx:handleNext", "label": "app/practice/exam.tsx:handleNext", "type": "function" },
+  
+  // flashcards.tsx functions
+  { "id": "app/practice/flashcards.tsx:FlashcardScreen", "label": "app/practice/flashcards.tsx:FlashcardScreen", "type": "component" },
+  { "id": "app/practice/flashcards.tsx:speak", "label": "app/practice/flashcards.tsx:speak", "type": "function" },
+  { "id": "app/practice/flashcards.tsx:flipCard", "label": "app/practice/flashcards.tsx:flipCard", "type": "function" },
+  { "id": "app/practice/flashcards.tsx:handleNext", "label": "app/practice/flashcards.tsx:handleNext", "type": "function" },
+  
+  // grammar.tsx functions
+  { "id": "app/practice/grammar.tsx:GrammarScreen", "label": "app/practice/grammar.tsx:GrammarScreen", "type": "component" },
+  { "id": "app/practice/grammar.tsx:speak", "label": "app/practice/grammar.tsx:speak", "type": "function" },
+  { "id": "app/practice/grammar.tsx:CardItem", "label": "app/practice/grammar.tsx:CardItem", "type": "function" },
+  
+  // listening.tsx functions
+  { "id": "app/practice/listening.tsx:ListeningScreen", "label": "app/practice/listening.tsx:ListeningScreen", "type": "component" },
+  
+  // UI Components
+  { "id": "components/ui/button.tsx:Button", "label": "components/ui/button.tsx:Button", "type": "component" },
+  { "id": "components/ui/card.tsx:Card", "label": "components/ui/card.tsx:Card", "type": "component" },
+  { "id": "components/ui/progress-bar.tsx:ProgressBar", "label": "components/ui/progress-bar.tsx:ProgressBar", "type": "component" },
+  { "id": "components/ui/badge.tsx:Badge", "label": "components/ui/badge.tsx:Badge", "type": "component" },
+  
+  // Hooks
+  { "id": "hooks/use-user.ts:useUser", "label": "hooks/use-user.ts:useUser", "type": "hook" },
+  { "id": "hooks/use-courses.ts:useCourses", "label": "hooks/use-courses.ts:useCourses", "type": "hook" },
+  { "id": "hooks/use-lessons.ts:useLessons", "label": "hooks/use-lessons.ts:useLessons", "type": "hook" },
+  { "id": "hooks/use-flashcards.ts:useFlashcards", "label": "hooks/use-flashcards.ts:useFlashcards", "type": "hook" },
+  { "id": "hooks/use-grammar.ts:useGrammar", "label": "hooks/use-grammar.ts:useGrammar", "type": "hook" },
+  { "id": "hooks/use-stats.ts:useStats", "label": "hooks/use-stats.ts:useStats", "type": "hook" },
+  { "id": "hooks/use-theme-color.ts:useThemeColor", "label": "hooks/use-theme-color.ts:useThemeColor", "type": "hook" },
+  { "id": "hooks/use-color-scheme.ts:useColorScheme", "label": "hooks/use-color-scheme.ts:useColorScheme", "type": "hook" },
+  
+  // DB Repos
+  { "id": "db/client.ts:getDb", "label": "db/client.ts:getDb", "type": "function" },
+  { "id": "db/client.ts:initDb", "label": "db/client.ts:initDb", "type": "function" },
+  { "id": "db/repos/userRepo.ts:userRepo", "label": "db/repos/userRepo.ts:userRepo", "type": "object" },
+  { "id": "db/repos/userRepo.ts:getCurrentUser", "label": "db/repos/userRepo.ts:getCurrentUser", "type": "function" },
+  { "id": "db/repos/userRepo.ts:createUser", "label": "db/repos/userRepo.ts:createUser", "type": "function" },
+  { "id": "db/repos/userRepo.ts:updateXp", "label": "db/repos/userRepo.ts:updateXp", "type": "function" },
+  { "id": "db/repos/courseRepo.ts:courseRepo", "label": "db/repos/courseRepo.ts:courseRepo", "type": "object" },
+  { "id": "db/repos/courseRepo.ts:getCourses", "label": "db/repos/courseRepo.ts:getCourses", "type": "function" },
+  { "id": "db/repos/courseRepo.ts:getLessons", "label": "db/repos/courseRepo.ts:getLessons", "type": "function" },
+  { "id": "db/repos/courseRepo.ts:completeLesson", "label": "db/repos/courseRepo.ts:completeLesson", "type": "function" },
+  { "id": "db/repos/flashcardRepo.ts:flashcardRepo", "label": "db/repos/flashcardRepo.ts:flashcardRepo", "type": "object" },
+  { "id": "db/repos/flashcardRepo.ts:getSets", "label": "db/repos/flashcardRepo.ts:getSets", "type": "function" },
+  { "id": "db/repos/flashcardRepo.ts:getCardsBySetId", "label": "db/repos/flashcardRepo.ts:getCardsBySetId", "type": "function" },
+  { "id": "db/repos/grammarRepo.ts:grammarRepo", "label": "db/repos/grammarRepo.ts:grammarRepo", "type": "object" },
+  { "id": "db/repos/grammarRepo.ts:getAll", "label": "db/repos/grammarRepo.ts:getAll", "type": "function" },
+  { "id": "db/repos/statsRepo.ts:statsRepo", "label": "db/repos/statsRepo.ts:statsRepo", "type": "object" },
+  { "id": "db/repos/statsRepo.ts:getStats", "label": "db/repos/statsRepo.ts:getStats", "type": "function" }
+];
+
+const FILE_EDGES = [
+  // auth screens
+  { "from": "app/(auth)/login.tsx", "to": "components/ui/index.ts", "type": "import" },
+  { "from": "app/(auth)/login.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/(auth)/login.tsx", "to": "db/repos/userRepo.ts", "type": "import" },
+  { "from": "app/(auth)/otp.tsx", "to": "components/ui/index.ts", "type": "import" },
+  { "from": "app/(auth)/otp.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/(auth)/signup.tsx", "to": "components/ui/index.ts", "type": "import" },
+  { "from": "app/(auth)/signup.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/(auth)/signup.tsx", "to": "db/repos/userRepo.ts", "type": "import" },
+  { "from": "app/(auth)/success.tsx", "to": "components/ui/index.ts", "type": "import" },
+  { "from": "app/(auth)/success.tsx", "to": "constants/theme.ts", "type": "import" },
+  
+  // tabs
+  { "from": "app/(tabs)/index.tsx", "to": "components/ui/index.ts", "type": "import" },
+  { "from": "app/(tabs)/index.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/(tabs)/index.tsx", "to": "hooks/use-user.ts", "type": "import" },
+  { "from": "app/(tabs)/index.tsx", "to": "hooks/use-courses.ts", "type": "import" },
+  { "from": "app/(tabs)/index.tsx", "to": "constants/mock-data.ts", "type": "import" },
+  { "from": "app/(tabs)/library.tsx", "to": "components/ui/index.ts", "type": "import" },
+  { "from": "app/(tabs)/library.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/(tabs)/library.tsx", "to": "hooks/use-flashcards.ts", "type": "import" },
+  { "from": "app/(tabs)/library.tsx", "to": "hooks/use-courses.ts", "type": "import" },
+  { "from": "app/(tabs)/library.tsx", "to": "constants/mock-data.ts", "type": "import" },
+  { "from": "app/(tabs)/profile.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/(tabs)/profile.tsx", "to": "hooks/use-user.ts", "type": "import" },
+  { "from": "app/(tabs)/stats.tsx", "to": "components/ui/index.ts", "type": "import" },
+  { "from": "app/(tabs)/stats.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/(tabs)/stats.tsx", "to": "constants/mock-data.ts", "type": "import" },
+  { "from": "app/(tabs)/stats.tsx", "to": "hooks/use-stats.ts", "type": "import" },
+  
+  // practice screens
+  { "from": "app/practice/lessons.tsx", "to": "components/ui/index.ts", "type": "import" },
+  { "from": "app/practice/lessons.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/practice/lessons.tsx", "to": "hooks/use-lessons.ts", "type": "import" },
+  { "from": "app/practice/exam.tsx", "to": "components/ui/index.ts", "type": "import" },
+  { "from": "app/practice/exam.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/practice/exam.tsx", "to": "constants/mock-data.ts", "type": "import" },
+  { "from": "app/practice/flashcards.tsx", "to": "components/ui/progress-bar.tsx", "type": "import" },
+  { "from": "app/practice/flashcards.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/practice/flashcards.tsx", "to": "hooks/use-flashcards.ts", "type": "import" },
+  { "from": "app/practice/grammar.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/practice/grammar.tsx", "to": "hooks/use-grammar.ts", "type": "import" },
+  { "from": "app/practice/listening.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/practice/custom-dictation.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/practice/exam-result.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/practice/lesson-complete.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "app/practice/lesson-setup.tsx", "to": "constants/theme.ts", "type": "import" },
+  
+  // UI components
+  { "from": "components/ui/button.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "components/ui/card.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "components/ui/progress-bar.tsx", "to": "constants/theme.ts", "type": "import" },
+  { "from": "components/ui/badge.tsx", "to": "constants/theme.ts", "type": "import" },
+  
+  // Hooks -> DB
+  { "from": "hooks/use-user.ts", "to": "db/repos/userRepo.ts", "type": "import" },
+  { "from": "hooks/use-courses.ts", "to": "db/repos/courseRepo.ts", "type": "import" },
+  { "from": "hooks/use-lessons.ts", "to": "db/repos/courseRepo.ts", "type": "import" },
+  { "from": "hooks/use-flashcards.ts", "to": "db/repos/flashcardRepo.ts", "type": "import" },
+  { "from": "hooks/use-grammar.ts", "to": "db/repos/grammarRepo.ts", "type": "import" },
+  { "from": "hooks/use-stats.ts", "to": "db/repos/statsRepo.ts", "type": "import" },
+  
+  // DB Repos -> DB Client
+  { "from": "db/repos/userRepo.ts", "to": "db/client.ts", "type": "import" },
+  { "from": "db/repos/courseRepo.ts", "to": "db/client.ts", "type": "import" },
+  { "from": "db/repos/flashcardRepo.ts", "to": "db/client.ts", "type": "import" },
+  { "from": "db/repos/grammarRepo.ts", "to": "db/client.ts", "type": "import" },
+  { "from": "db/repos/statsRepo.ts", "to": "db/client.ts", "type": "import" }
+];
+
+const FUNC_EDGES = [
+  // login.tsx calls
+  { "from": "app/(auth)/login.tsx:handleLogin", "to": "db/repos/userRepo.ts:getCurrentUser", "type": "call" },
+  { "from": "app/(auth)/login.tsx:handleLogin", "to": "hooks/use-user.ts:useUser", "type": "call" },
+  
+  // signup.tsx calls
+  { "from": "app/(auth)/signup.tsx:handleSignup", "to": "db/repos/userRepo.ts:createUser", "type": "call" },
+  
+  // HomeScreen calls
+  { "from": "app/(tabs)/index.tsx:HomeScreen", "to": "hooks/use-user.ts:useUser", "type": "call" },
+  { "from": "app/(tabs)/index.tsx:HomeScreen", "to": "hooks/use-courses.ts:useCourses", "type": "call" },
+  
+  // LibraryScreen calls
+  { "from": "app/(tabs)/library.tsx:LibraryScreen", "to": "hooks/use-flashcards.ts:useFlashcards", "type": "call" },
+  { "from": "app/(tabs)/library.tsx:LibraryScreen", "to": "hooks/use-courses.ts:useCourses", "type": "call" },
+  { "from": "app/(tabs)/library.tsx:FlashcardSetsList", "to": "app/practice/flashcards.tsx:FlashcardScreen", "type": "call" },
+  { "from": "app/(tabs)/library.tsx:CoursesList", "to": "app/practice/lessons.tsx:LessonsScreen", "type": "call" },
+  
+  // ProfileScreen calls
+  { "from": "app/(tabs)/profile.tsx:ProfileScreen", "to": "hooks/use-user.ts:useUser", "type": "call" },
+  
+  // StatsScreen calls
+  { "from": "app/(tabs)/stats.tsx:StatsScreen", "to": "hooks/use-stats.ts:useStats", "type": "call" },
+  
+  // LessonsScreen calls
+  { "from": "app/practice/lessons.tsx:LessonsScreen", "to": "hooks/use-lessons.ts:useLessons", "type": "call" },
+  
+  // ExamScreen calls
+  { "from": "app/practice/exam.tsx:ExamScreen", "to": "app/practice/exam.tsx:handleNext", "type": "call" },
+  
+  // FlashcardScreen calls
+  { "from": "app/practice/flashcards.tsx:FlashcardScreen", "to": "hooks/use-flashcards.ts:useFlashcards", "type": "call" },
+  { "from": "app/practice/flashcards.tsx:FlashcardScreen", "to": "app/practice/flashcards.tsx:speak", "type": "call" },
+  { "from": "app/practice/flashcards.tsx:FlashcardScreen", "to": "app/practice/flashcards.tsx:flipCard", "type": "call" },
+  { "from": "app/practice/flashcards.tsx:FlashcardScreen", "to": "app/practice/flashcards.tsx:handleNext", "type": "call" },
+  { "from": "app/practice/flashcards.tsx:handleNext", "to": "hooks/use-flashcards.ts:useFlashcards", "type": "call" },
+  
+  // GrammarScreen calls
+  { "from": "app/practice/grammar.tsx:GrammarScreen", "to": "hooks/use-grammar.ts:useGrammar", "type": "call" },
+  { "from": "app/practice/grammar.tsx:GrammarScreen", "to": "app/practice/grammar.tsx:speak", "type": "call" },
+  
+  // useUser hook
+  { "from": "hooks/use-user.ts:useUser", "to": "db/repos/userRepo.ts:getCurrentUser", "type": "call" },
+  { "from": "hooks/use-user.ts:useUser", "to": "db/repos/userRepo.ts:updateXp", "type": "call" },
+  
+  // useCourses hook
+  { "from": "hooks/use-courses.ts:useCourses", "to": "db/repos/courseRepo.ts:getCourses", "type": "call" },
+  { "from": "hooks/use-courses.ts:useCourses", "to": "db/repos/courseRepo.ts:getLessons", "type": "call" },
+  { "from": "hooks/use-courses.ts:useCourses", "to": "db/repos/courseRepo.ts:completeLesson", "type": "call" },
+  
+  // useLessons hook
+  { "from": "hooks/use-lessons.ts:useLessons", "to": "db/repos/courseRepo.ts:getLessons", "type": "call" },
+  
+  // useFlashcards hook
+  { "from": "hooks/use-flashcards.ts:useFlashcards", "to": "db/repos/flashcardRepo.ts:getSets", "type": "call" },
+  { "from": "hooks/use-flashcards.ts:useFlashcards", "to": "db/repos/flashcardRepo.ts:getCardsBySetId", "type": "call" },
+  { "from": "hooks/use-flashcards.ts:useFlashcards", "to": "db/repos/flashcardRepo.ts:markMastered", "type": "call" },
+  
+  // useGrammar hook
+  { "from": "hooks/use-grammar.ts:useGrammar", "to": "db/repos/grammarRepo.ts:getAll", "type": "call" },
+  
+  // useStats hook
+  { "from": "hooks/use-stats.ts:useStats", "to": "db/repos/statsRepo.ts:getStats", "type": "call" }
+];
+
+const PROJECT_NAME = "Yonsei-Pulse";
+// ═══════════════════════════════════════════════
+
+let currentMode = 'file';
+let network = null;
+
+function getNodesForMode(mode) {
+  if (mode === 'file') return FILE_NODES;
+  if (mode === 'func') return FUNC_NODES;
+  return [...FILE_NODES, ...FUNC_NODES];
+}
+
+function getEdgesForMode(mode) {
+  if (mode === 'file') return FILE_EDGES;
+  if (mode === 'func') return FUNC_EDGES;
+  return [...FILE_EDGES, ...FUNC_EDGES];
+}
+
+function buildDegreeMap(nodes, edges) {
+  const degreeMap = {};
+  nodes.forEach(n => { degreeMap[n.id] = 0; });
+  edges.forEach(e => {
+    degreeMap[e.from] = (degreeMap[e.from] || 0) + 1;
+    degreeMap[e.to]   = (degreeMap[e.to]   || 0) + 1;
+  });
+  return degreeMap;
+}
+
+const allNodes = getNodesForMode('hybrid');
+const allEdges = getEdgesForMode('hybrid');
+const degreeMap = buildDegreeMap(allNodes, allEdges);
+const maxDeg = Math.max(...Object.values(degreeMap), 1);
+
+function nodeColor(id, label, type) {
+  const deg = degreeMap[id] || 0;
+  const ratio = deg / maxDeg;
+  
+  if (id.includes(':')) {
+    const nodeType = type || 'function';
+    if (nodeType === 'hook') return { bg: '#1a3a2a', border: '#3fb950', font: '#3fb950' };
+    if (nodeType === 'component') return { bg: '#3a2e0a', border: '#d29922', font: '#d29922' };
+    return { bg: '#2d1f3d', border: '#a371f7', font: '#a371f7' };
+  }
+  
+  if (ratio > 0.6) return { bg: '#1f6feb', border: '#58a6ff', font: '#e6edf3' };
+  if (label.match(/component|screen|page|view/i)) return { bg: '#1a3a2a', border: '#3fb950', font: '#3fb950' };
+  if (label.match(/util|helper|lib|hook|service|api/i)) return { bg: '#3a2e0a', border: '#d29922', font: '#d29922' };
+  return { bg: '#1c2128', border: '#484f58', font: '#8b949e' };
+}
+
+function nodeSize(id) {
+  const deg = degreeMap[id] || 0;
+  return 12 + (deg / maxDeg) * 22;
+}
+
+function nodeShape(id) {
+  if (id.includes(':')) return 'box';
+  return 'dot';
+}
+
+function shortLabel(path) {
+  if (path.includes(':')) {
+    const [file, func] = path.split(':');
+    const fileParts = file.split('/');
+    const shortFile = fileParts[fileParts.length - 1];
+    return `${shortFile}:${func}`;
+  }
+  const parts = path.split('/');
+  const file = parts[parts.length - 1];
+  return file.replace(/\.(js|ts|jsx|tsx|py|go|rs|java|c|cpp|cs|rb|swift|kt|vue|svelte)$/, '');
+}
+
+function buildGraph(mode) {
+  const nodes = getNodesForMode(mode);
+  const edges = getEdgesForMode(mode);
+  
+  const degreeMap = buildDegreeMap(nodes, edges);
+  const maxDeg = Math.max(...Object.values(degreeMap), 1);
+
+  const nodeTypeMap = {};
+  FUNC_NODES.forEach(n => { nodeTypeMap[n.id] = n.type; });
+
+  const visNodes = new vis.DataSet(nodes.map(n => {
+    const label = shortLabel(n.label);
+    const nodeType = n.type || (n.id.includes(':') ? 'function' : 'file');
+    const col = nodeColor(n.id, label, nodeType);
+    const shape = nodeShape(n.id);
+    const isFunc = n.id.includes(':');
+    return {
+      id: n.id,
+      label,
+      title: n.label,
+      size: nodeSize(n.id),
+      shape: shape,
+      color: { 
+        background: col.bg, 
+        border: col.border, 
+        highlight: { background: isFunc ? '#a371f7' : '#1f6feb', border: '#58a6ff' } 
+      },
+      font: { color: col.font, size: shape === 'box' ? 9 : 11, face: 'SF Mono, Fira Code, monospace' },
+      borderWidth: 1.5,
+      _fullPath: n.label,
+      _degree: degreeMap[n.id] || 0,
+      _isFunction: isFunc,
+    };
+  }));
+
+  const visEdges = new vis.DataSet(edges.map((e, i) => ({
+    id: i,
+    from: e.from,
+    to: e.to,
+    arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+    color: { color: e.type === 'call' ? '#a371f7' : '#f85149', highlight: '#58a6ff', opacity: 0.7 },
+    width: e.type === 'call' ? 1 : 2,
+    dashes: e.type === 'call',
+    smooth: { type: 'curvedCW', roundness: 0.1 },
+  })));
+
+  return { nodes: visNodes, edges: visEdges };
+}
+
+let currentData = buildGraph('file');
+const options = {
+  physics: {
+    enabled: true,
+    solver: 'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -60,
+      centralGravity: 0.008,
+      springLength: 120,
+      springConstant: 0.05,
+      damping: 0.6,
+    },
+    stabilization: { iterations: 200 },
+  },
+  interaction: {
+    hover: true,
+    tooltipDelay: 0,
+    hideEdgesOnDrag: true,
+    multiselect: true,
+  },
+  layout: { improvedLayout: false },
+};
+
+const container = document.getElementById('graph');
+network = new vis.Network(container, currentData, options);
+
+const totalNodes = getNodesForMode(currentMode).length;
+const totalEdges = getEdgesForMode(currentMode).length;
+document.getElementById('stats').innerHTML = `
+  <div class="stat"><div class="stat-dot" style="background:#58a6ff"></div>${totalNodes} nodes</div>
+  <div class="stat"><div class="stat-dot" style="background:#3fb950"></div>${totalEdges} edges</div>
+  <div class="stat"><div class="stat-dot" style="background:#d29922"></div>${PROJECT_NAME}</div>
+`;
+
+const tooltip = document.getElementById('tooltip');
+network.on('hoverNode', params => {
+  const node = currentData.nodes.get(params.node);
+  if (!node) return;
+  const isFunc = node._isFunction;
+  tooltip.style.display = 'block';
+  tooltip.innerHTML = `
+    <div class="tip-type">${isFunc ? 'Function' : 'File'}</div>
+    <div class="tip-name">${node._fullPath}</div>
+    <div class="tip-info">Connections: ${node._degree}</div>
+  `;
+});
+
+network.on('blurNode', () => { tooltip.style.display = 'none'; });
+
+container.addEventListener('mousemove', e => {
+  tooltip.style.left = (e.offsetX + 14) + 'px';
+  tooltip.style.top  = (e.offsetY + 14) + 'px';
+});
+
+const infoPanel = document.getElementById('info-panel');
+network.on('click', params => {
+  if (params.nodes.length === 0) { infoPanel.style.display = 'none'; return; }
+  const nodeId = params.nodes[0];
+  const node = currentData.nodes.get(nodeId);
+  if (!node) return;
+
+  const connectedEdges = network.getConnectedEdges(nodeId);
+  const incoming = [], outgoing = [];
+  connectedEdges.forEach(eid => {
+    const edge = currentData.edges.get(eid);
+    if (!edge) return;
+    if (edge.to === nodeId) {
+      const src = currentData.nodes.get(edge.from);
+      if (src) incoming.push({ path: src._fullPath, isFunc: src._isFunction });
+    } else {
+      const dst = currentData.nodes.get(edge.to);
+      if (dst) outgoing.push({ path: dst._fullPath, isFunc: dst._isFunction });
+    }
+  });
+
+  const makeDeps = (arr) => arr.length === 0
+    ? '<div class="dep-item" style="color:#484f58">none</div>'
+    : arr.map(p => `<div class="dep-item ${p.isFunc ? 'dep-func' : 'dep-file'}">${shortLabel(p.path)}</div>`).join('');
+
+  infoPanel.style.display = 'block';
+  infoPanel.innerHTML = `
+    <h3>${shortLabel(node._fullPath)}</h3>
+    <div class="info-row"><span>Full path</span><span>${node._fullPath}</span></div>
+    <div class="info-row"><span>Type</span><span>${node._isFunction ? 'Function' : 'File'}</span></div>
+    <div class="info-row"><span>Total connections</span><span>${node._degree}</span></div>
+    <div class="info-row"><span>Imports/Calls (out)</span><span>${outgoing.length}</span></div>
+    <div class="info-row"><span>Imported/Called by (in)</span><span>${incoming.length}</span></div>
+    <h4>→ Imports/Calls</h4>${makeDeps(outgoing)}
+    <h4>← Imported/Called by</h4>${makeDeps(incoming)}
+  `;
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase().trim();
+  if (!q) { 
+    currentData.nodes.forEach(n => currentData.nodes.update({ id: n.id, opacity: 1 })); 
+    return; 
+  }
+  currentData.nodes.forEach(n => {
+    const match = n._fullPath.toLowerCase().includes(q);
+    currentData.nodes.update({ id: n.id, opacity: match ? 1 : 0.08 });
+  });
+});
+
+let physicsOn = true;
+function togglePhysics() {
+  physicsOn = !physicsOn;
+  network.setOptions({ physics: { enabled: physicsOn } });
+  document.getElementById('btn-physics').classList.toggle('active', physicsOn);
+}
+
+function resetView() {
+  network.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } });
+}
+
+function focusHighDegree() {
+  const threshold = maxDeg * 0.4;
+  const hubs = allNodes.filter(n => (degreeMap[n.id] || 0) >= threshold).map(n => n.id);
+  if (hubs.length === 0) return;
+  network.selectNodes(hubs);
+  network.fit({ nodes: hubs, animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById('mode-' + mode).classList.add('active');
+  
+  currentData = buildGraph(mode);
+  network.setData(currentData);
+  
+  const nodes = getNodesForMode(mode);
+  const edges = getEdgesForMode(mode);
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-dot" style="background:#58a6ff"></div>${nodes.length} nodes</div>
+    <div class="stat"><div class="stat-dot" style="background:#3fb950"></div>${edges.length} edges</div>
+    <div class="stat"><div class="stat-dot" style="background:#d29922"></div>${PROJECT_NAME}</div>
+  `;
+}
+
+function exportPNG() {
+  const canvas = container.querySelector('canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = 'codebase-graph.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+network.on('stabilizationIterationsDone', () => {
+  network.setOptions({ physics: { enabled: false } });
+  physicsOn = false;
+  document.getElementById('btn-physics').classList.remove('active');
+});
+});
+</script>
+</body>
+</html>

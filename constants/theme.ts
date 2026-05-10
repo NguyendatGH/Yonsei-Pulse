@@ -60,6 +60,60 @@ export const Colors = {
   overlayLight: 'rgba(255,255,255,0.8)',
 } as const;
 
+export const DarkColors = {
+  // Primary brand (Vibrant Pink)
+  primary: '#EF5FA0',
+  primaryLight: '#3D1D2D',
+  primaryDark: '#D44D87',
+
+  // Pastel accent
+  accent: '#F28C9D',
+  accentLight: '#2D1D22',
+  accentDark: '#E8899A',
+
+  // Pastel variants (Darker versions)
+  pastelPink: '#4A2B31',
+  pastelBlue: '#1E293B',
+  pastelGreen: '#064E3B',
+  pastelYellow: '#451A03',
+  pastelPurple: '#2E1065',
+  pastelOrange: '#431407',
+
+  // Neutrals
+  white: '#1E293B',
+  background: '#0F172A',
+  surface: '#1E293B',
+  surfaceSecondary: '#334155',
+  border: '#334155',
+  borderLight: '#1E293B',
+
+  // Text
+  textPrimary: '#F8FAFC',
+  textSecondary: '#94A3B8',
+  textTertiary: '#64748B',
+  textOnPrimary: '#FFFFFF',
+  textOnAccent: '#F8FAFC',
+
+  // Semantic
+  success: '#10B981',
+  successLight: '#064E3B',
+  warning: '#F59E0B',
+  warningLight: '#451A03',
+  error: '#EF4444',
+  errorLight: '#450A0A',
+  info: '#3B82F6',
+  infoLight: '#1E3A8A',
+
+  // Gradients
+  gradientPink: ['#EF5FA0', '#F28C9D'] as const,
+  gradientLight: ['#1E293B', '#0F172A'] as const,
+  gradientPrimary: ['#EF5FA0', '#D44D87'] as const,
+
+  // Overlay
+  overlay: 'rgba(255,255,255,0.3)',
+  overlayLight: 'rgba(0,0,0,0.8)',
+} as const;
+
 // ─── Typography ──────────────────────────────────────────────
 export const Typography = {
   fontFamily: Platform.select({

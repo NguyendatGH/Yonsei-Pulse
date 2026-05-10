@@ -27,12 +27,13 @@ export const seedDb = async (force = false) => {
     
     // Seed User
     await db.runAsync(
-      `INSERT INTO users (id, name, email, avatar, level, xp, streak, joinDate, todayWords, totalWords, totalStudyMinutes, completedLessons) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, name, email, password, avatar, level, xp, streak, joinDate, todayWords, totalWords, totalStudyMinutes, completedLessons) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         MOCK_USER.id, 
         MOCK_USER.name, 
         MOCK_USER.email, 
+        '123456', // Mock password
         MOCK_USER.avatar as any, 
         MOCK_USER.level, 
         MOCK_USER.xp, 

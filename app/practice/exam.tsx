@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,24 +12,96 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, ProgressBar } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
-import { MOCK_EXAM } from '@/constants/mock-data';
+import { examRepo, Exam, Question } from '@/db/repos/examRepo';
+import { ActivityIndicator } from 'react-native';
 
 export default function ExamScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [exam, setExam] = useState<Exam | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentQ, setCurrentQ] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  
-  const totalQ = MOCK_EXAM.questions.length;
-  const question = MOCK_EXAM.questions[currentQ];
+  const [textAnswer, setTextAnswer] = useState<string>('');
+  const [answers, setAnswers] = useState<Record<number, any>>({});
+  const [timeLeft, setTimeLeft] = useState(30 * 60); 
+
+  useEffect(() => {
+    examRepo.generateExam()
+      .then(setExam)
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!exam) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [exam]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  if (loading || !exam) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  const totalQ = exam.questions.length;
+  const question = exam.questions[currentQ];
   const progress = (currentQ + 1) / totalQ;
 
+  const handleFinish = (currentAnswers: Record<number, any>) => {
+    if (!exam) return;
+    let correct = 0;
+    exam.questions.forEach((q, index) => {
+      const userAnswer = currentAnswers[index];
+      if (q.type === 'multiple_choice') {
+        if (userAnswer === q.correctAnswer) correct++;
+      } else if (q.type === 'fill_blank') {
+        if (typeof userAnswer === 'string' && userAnswer.trim().toLowerCase() === String(q.correctAnswer).toLowerCase()) {
+          correct++;
+        }
+      }
+    });
+
+    const score = Math.round((correct / totalQ) * 100);
+    const timeTakenSec = (30 * 60) - timeLeft;
+    const timeTakenStr = formatTime(timeTakenSec);
+
+    router.push({
+      pathname: '/practice/exam-result',
+      params: {
+        score,
+        totalQuestions: totalQ,
+        correctAnswers: correct,
+        wrongAnswers: totalQ - correct,
+        timeTaken: timeTakenStr,
+        passed: score >= exam.passingScore ? 'true' : 'false',
+      }
+    });
+  };
+
   const handleNext = () => {
+    const newAnswers = {
+      ...answers,
+      [currentQ]: question.type === 'multiple_choice' ? selectedOption : textAnswer
+    };
+    setAnswers(newAnswers);
+
     if (currentQ < totalQ - 1) {
       setCurrentQ(currentQ + 1);
-      setSelectedOption(null);
+      setSelectedOption(answers[currentQ + 1] ?? null);
+      setTextAnswer(answers[currentQ + 1] ?? '');
     } else {
-      router.push('/practice/exam-result');
+      handleFinish(newAnswers);
     }
   };
 
@@ -40,10 +112,12 @@ export default function ExamScreen() {
           <Ionicons name="close" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.timerBox}>
-          <Ionicons name="time" size={18} color={Colors.error} />
-          <Text style={styles.timerText}>24:15</Text>
+          <Ionicons name="time" size={18} color={timeLeft < 60 ? Colors.error : Colors.primary} />
+          <Text style={[styles.timerText, { color: timeLeft < 60 ? Colors.error : Colors.primary }]}>
+            {formatTime(timeLeft)}
+          </Text>
         </View>
-        <TouchableOpacity onPress={() => router.push('/practice/exam-result')} style={styles.finishBtn}>
+        <TouchableOpacity onPress={() => handleFinish(answers)} style={styles.finishBtn}>
           <Text style={styles.finishBtnText}>Nộp bài</Text>
         </TouchableOpacity>
       </View>
@@ -85,6 +159,8 @@ export default function ExamScreen() {
                placeholder="Nhập câu trả lời của bạn..."
                placeholderTextColor={Colors.textTertiary}
                multiline
+               value={textAnswer}
+               onChangeText={setTextAnswer}
              />
            )}
         </View>
@@ -121,6 +197,12 @@ export default function ExamScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.white,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.white,
   },
   header: {

@@ -7,19 +7,32 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, Badge, ProgressBar } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
+import { analytics } from '@/services/analytics';
 import { MOCK_EXAM_RESULT } from '@/constants/mock-data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ExamResultScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const data = MOCK_EXAM_RESULT;
+  
+  const data = params.score !== undefined ? {
+    score: Number(params.score),
+    totalQuestions: Number(params.totalQuestions),
+    correctAnswers: Number(params.correctAnswers),
+    timeTaken: params.timeTaken as string,
+    passed: params.passed === 'true',
+  } : MOCK_EXAM_RESULT;
+
+  React.useEffect(() => {
+    analytics.trackExamResult(data.score, data.passed);
+  }, [data.score, data.passed]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

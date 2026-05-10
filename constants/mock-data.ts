@@ -53,7 +53,20 @@ export const MOCK_DAILY_STATS = {
 
 // ─── Quick Access Actions ────────────────────────────────────
 export const MOCK_QUICK_ACTIONS = [
-  { id: 'flashcards', title: 'Flashcards', icon: 'layers', color: '#EF5FA0', route: '/(tabs)/library?tab=flashcards' },
+  {
+    id: 'srs',
+    title: 'Ôn tập SRS',
+    icon: 'calendar',
+    color: '#8B5CF6',
+    route: '/practice/srs-review',
+  },
+  {
+    id: 'flashcards',
+    title: 'Từ vựng',
+    icon: 'copy',
+    color: '#EF5FA0',
+    route: '/practice/flashcards',
+  },
   { id: 'listening', title: 'Luyện nghe', icon: 'headset', color: '#60A5FA', route: '/(tabs)/library?tab=listening' },
   { id: 'grammar', title: 'Ngữ pháp', icon: 'book', color: '#34D399', route: '/(tabs)/library?tab=courses' },
   { id: 'custom', title: 'Tự soạn bài', icon: 'create', color: '#8B5CF6', route: '/practice/custom-dictation' },
@@ -333,11 +346,35 @@ export const MOCK_EXAM_RESULT = {
 } as const;
 
 // ─── Culture Tips ────────────────────────────────────────────
-export const MOCK_CULTURE_TIP = {
-  title: 'Ẩm thực đường phố Myeongdong',
-  description: 'Học từ vựng qua trải nghiệm thực tế',
-  image: null,
-} as const;
+export const MOCK_CULTURE_TIPS = [
+  {
+    id: '1',
+    title: 'Ẩm thực đường phố Myeongdong',
+    description: 'Khám phá thiên đường ẩm thực với Teokbokki và Gimbap tại trung tâm Seoul.',
+  },
+  {
+    id: '2',
+    title: 'Văn hóa cúi chào',
+    description: 'Tìm hiểu các cấp độ cúi chào thể hiện sự kính trọng trong xã hội Hàn Quốc.',
+  },
+  {
+    id: '3',
+    title: 'Trang phục Hanbok',
+    description: 'Nét đẹp truyền thống của trang phục Hàn Quốc và ý nghĩa của các màu sắc.',
+  },
+  {
+    id: '4',
+    title: 'Lễ hội bùn Boryeong',
+    description: 'Một trong những lễ hội mùa hè sôi động nhất thu hút hàng triệu khách du lịch.',
+  },
+  {
+    id: '5',
+    title: 'Nghi thức uống trà',
+    description: 'Sự tĩnh lặng và tinh tế trong nghệ thuật trà đạo truyền thống Hàn Quốc.',
+  },
+] as const;
+
+export const MOCK_CULTURE_TIP = MOCK_CULTURE_TIPS[0];
 
 // ─── Statistics Extended ─────────────────────────────────────
 export const MOCK_STATISTICS = {

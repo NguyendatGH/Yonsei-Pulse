@@ -22,17 +22,18 @@ export default function SignupScreen() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const handleSignup = async () => {
-    if (!name || !email) {
+    if (!name.trim() || !email.trim() || !password.trim()) {
       alert('Vui lòng điền đầy đủ thông tin');
       return;
     }
     
     setLoading(true);
     try {
-      await userRepo.createUser({ name, email });
-      router.push('/success');
+      await userRepo.createUser({ name: name.trim(), email: email.trim(), password: password.trim() });
+      router.replace('/(tabs)');
     } catch (err) {
       console.error('Signup error:', err);
       alert('Đăng ký không thành công. Có thể email đã tồn tại.');

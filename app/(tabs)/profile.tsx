@@ -5,22 +5,38 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
 import { useUser } from '@/hooks/use-user';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { user, loading } = useUser();
+  const { isDark, toggleTheme, theme } = useTheme();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Đăng xuất',
+      'Bạn có chắc chắn muốn đăng xuất không?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        { text: 'Đăng xuất', style: 'destructive', onPress: () => router.replace('/login') },
+      ]
+    );
+  };
 
   if (loading || !user) return null;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.background }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Hồ sơ cá nhân</Text>
         <TouchableOpacity style={styles.settingsBtn} activeOpacity={0.7}>
@@ -75,24 +91,24 @@ export default function ProfileScreen() {
         <View style={styles.menuContainer}>
            <Text style={styles.menuTitle}>Tài khoản</Text>
            <View style={styles.menuGroup}>
-              <SettingItem icon="person-outline" label="Thông tin cá nhân" hasArrow />
-              <SettingItem icon="notifications-outline" label="Thông báo" hasArrow />
-              <SettingItem icon="shield-checkmark-outline" label="Bảo mật" hasArrow />
-           </View>
+               <SettingItem icon="person-outline" label="Thông tin cá nhân" hasArrow onPress={() => Alert.alert('Sắp ra mắt', 'Tính năng đang được phát triển')} />
+               <SettingItem icon="notifications-outline" label="Thông báo" hasArrow onPress={() => Alert.alert('Sắp ra mắt', 'Tính năng đang được phát triển')} />
+               <SettingItem icon="shield-checkmark-outline" label="Bảo mật" hasArrow onPress={() => Alert.alert('Sắp ra mắt', 'Tính năng đang được phát triển')} />
+            </View>
 
            <Text style={styles.menuTitle}>Ứng dụng</Text>
            <View style={styles.menuGroup}>
-              <SettingItem icon="language-outline" label="Ngôn ngữ ứng dụng" value="Tiếng Việt" hasArrow />
-              <SettingItem icon="moon-outline" label="Chế độ tối" hasToggle />
-              <SettingItem icon="help-circle-outline" label="Trung tâm hỗ trợ" hasArrow />
+               <SettingItem icon="language-outline" label="Ngôn ngữ ứng dụng" value="Tiếng Việt" hasArrow onPress={() => Alert.alert('Sắp ra mắt', 'Tính năng đang được phát triển')} />
+               <SettingItem icon="moon-outline" label="Chế độ tối" hasToggle toggleValue={isDark} onToggle={toggleTheme} />
+               <SettingItem icon="help-circle-outline" label="Trung tâm hỗ trợ" hasArrow onPress={() => Alert.alert('Sắp ra mắt', 'Tính năng đang được phát triển')} />
            </View>
 
-           <TouchableOpacity style={styles.logoutButton} activeOpacity={0.7}>
-              <LinearGradient colors={['#FFF5F5', '#FFEAEA']} style={styles.logoutGrad}>
-                 <Ionicons name="log-out-outline" size={22} color={Colors.error} />
-                 <Text style={styles.logoutText}>Đăng xuất</Text>
-              </LinearGradient>
-           </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutButton} activeOpacity={0.7} onPress={handleLogout}>
+               <LinearGradient colors={['#FFF5F5', '#FFEAEA']} style={styles.logoutGrad}>
+                  <Ionicons name="log-out-outline" size={22} color={Colors.error} />
+                  <Text style={styles.logoutText}>Đăng xuất</Text>
+               </LinearGradient>
+            </TouchableOpacity>
         </View>
 
         <View style={{ height: 120 }} />
@@ -101,17 +117,26 @@ export default function ProfileScreen() {
   );
 }
 
-function SettingItem({ icon, label, value, hasArrow, hasToggle }: any) {
+function SettingItem({ icon, label, value, hasArrow, hasToggle, toggleValue, onPress, onToggle }: {
+  icon: string;
+  label: string;
+  value?: string;
+  hasArrow?: boolean;
+  hasToggle?: boolean;
+  toggleValue?: boolean;
+  onPress?: () => void;
+  onToggle?: () => void;
+}) {
   return (
-    <TouchableOpacity style={styles.settingItem} activeOpacity={0.6}>
+    <TouchableOpacity style={styles.settingItem} activeOpacity={0.6} onPress={hasToggle ? onToggle : onPress}>
        <View style={styles.settingIconBox}>
-          <Ionicons name={icon} size={22} color={Colors.primary} />
+          <Ionicons name={icon as any} size={22} color={Colors.primary} />
        </View>
        <Text style={styles.settingLabelText}>{label}</Text>
        {value && <Text style={styles.settingValText}>{value}</Text>}
        {hasToggle && (
-         <View style={styles.toggleOuter}>
-            <View style={styles.toggleInner} />
+         <View style={[styles.toggleOuter, toggleValue && styles.toggleOuterActive]}>
+            <View style={[styles.toggleInner, toggleValue && styles.toggleInnerActive]} />
          </View>
        )}
        {hasArrow && <Ionicons name="chevron-forward-outline" size={18} color={Colors.textTertiary} />}
@@ -278,15 +303,22 @@ const styles = StyleSheet.create({
     width: 46,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#FFD4DC',
+    backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     paddingHorizontal: 3,
+  },
+  toggleOuterActive: {
+    backgroundColor: Colors.primary,
   },
   toggleInner: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.white,
+    alignSelf: 'flex-start',
+  },
+  toggleInnerActive: {
+    alignSelf: 'flex-end',
   },
   logoutButton: {
     marginTop: 10,
