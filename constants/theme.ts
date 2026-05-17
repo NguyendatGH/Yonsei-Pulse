@@ -27,7 +27,7 @@ export const Colors = {
 
   // Neutrals
   white: '#FFFFFF',
-  background: '#FFFFFF', // Changed to pure white as per images
+  background: '#FFF0F3',
   surface: '#FFFFFF',
   surfaceSecondary: '#FFF0F3',
   border: '#F3F4F6',

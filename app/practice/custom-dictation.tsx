@@ -53,13 +53,61 @@ type ParagraphData = {
   difficulty: string;
 };
 
+type YonseiTopic = {
+  id: string;
+  title: string;
+  vietnamese: string;
+  level: string;
+  book: string;
+  page: number;
+};
+
+const YONSEI_TOPICS: YonseiTopic[] = [
+  // Sơ cấp 1
+  { id: "s1_1", title: "인사와 소개", vietnamese: "Chào hỏi & Giới thiệu", level: "Sơ cấp 1", book: "YONSEI 1-1", page: 12 },
+  { id: "s1_2", title: "학교 생활", vietnamese: "Sinh hoạt học đường", level: "Sơ cấp 1", book: "YONSEI 1-1", page: 28 },
+  { id: "s1_3", title: "음식", vietnamese: "Thức ăn & Ăn uống", level: "Sơ cấp 1", book: "YONSEI 1-1", page: 45 },
+  { id: "s1_4", title: "가족", vietnamese: "Gia đình yêu thương", level: "Sơ cấp 1", book: "YONSEI 1-1", page: 62 },
+  { id: "s1_5", title: "하루 일과", vietnamese: "Sinh hoạt hằng ngày", level: "Sơ cấp 1", book: "YONSEI 1-1", page: 78 },
+
+  // Sơ cấp 2
+  { id: "s2_1", title: "날씨와 계절", vietnamese: "Thời tiết & Mùa", level: "Sơ cấp 2", book: "YONSEI 1-2", page: 94 },
+  { id: "s2_2", title: "쇼핑", vietnamese: "Mua sắm & Giá cả", level: "Sơ cấp 2", book: "YONSEI 1-2", page: 110 },
+  { id: "s2_3", title: "교통", vietnamese: "Giao thông & Đi lại", level: "Sơ cấp 2", book: "YONSEI 1-2", page: 126 },
+  { id: "s2_4", title: "약속", vietnamese: "Hẹn gặp & Gặp gỡ", level: "Sơ cấp 2", book: "YONSEI 1-2", page: 142 },
+
+  // Trung cấp 1
+  { id: "t1_1", title: "여행 계획", vietnamese: "Kế hoạch du lịch", level: "Trung cấp 1", book: "YONSEI 3-1", page: 102 },
+  { id: "t1_2", title: "취미 생활", vietnamese: "Sở thích cá nhân", level: "Trung cấp 1", book: "YONSEI 3-1", page: 118 },
+  { id: "t1_3", title: "건강 và 생활", vietnamese: "Sức khỏe & Đời sống", level: "Trung cấp 1", book: "YONSEI 3-1", page: 134 },
+  { id: "t1_4", title: "우편과 소포", vietnamese: "Bưu điện & Bưu phẩm", level: "Trung cấp 1", book: "YONSEI 3-1", page: 150 },
+
+  // Trung cấp 2
+  { id: "t2_1", title: "직장 생활", vietnamese: "Đời sống công sở", level: "Trung cấp 2", book: "YONSEI 3-2", page: 166 },
+  { id: "t2_2", title: "공연과 관람", vietnamese: "Biểu diễn & Thưởng thức", level: "Trung cấp 2", book: "YONSEI 3-2", page: 182 },
+  { id: "t2_3", title: "사고와 수리", vietnamese: "Sự cố & Sửa chữa", level: "Trung cấp 2", book: "YONSEI 3-2", page: 198 },
+
+  // Cao cấp 1
+  { id: "c1_1", title: "한국의 역사", vietnamese: "Lịch sử Hàn Quốc", level: "Cao cấp 1", book: "YONSEI 5-1", page: 214 },
+  { id: "c1_2", title: "현대 사회와 문제", vietnamese: "Xã hội hiện đại", level: "Cao cấp 1", book: "YONSEI 5-1", page: 230 },
+  { id: "c1_3", title: "과학과 기술", vietnamese: "Khoa học & Công nghệ", level: "Cao cấp 1", book: "YONSEI 5-1", page: 246 },
+
+  // Cao cấp 2
+  { id: "c2_1", title: "전통 예술", vietnamese: "Nghệ thuật truyền thống", level: "Cao cấp 2", book: "YONSEI 5-2", page: 262 },
+  { id: "c2_2", title: "철학과 사상", vietnamese: "Triết học & Tư tưởng", level: "Cao cấp 2", book: "YONSEI 5-2", page: 278 },
+  { id: "c2_3", title: "문학의 이해", vietnamese: "Thấu hiểu văn học", level: "Cao cấp 2", book: "YONSEI 5-2", page: 294 },
+];
+
 export default function DictationPracticeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const [step, setStep] = useState<
-    "source_selection" | "manual_input" | "sample_list" | "setup" | "practice"
+    "source_selection" | "manual_input" | "sample_list" | "yonsei_input" | "setup" | "practice"
   >("source_selection");
+  const [selectedLevel, setSelectedLevel] = useState("Sơ cấp 1");
+  const [selectedYonseiTopic, setSelectedYonseiTopic] = useState<YonseiTopic | null>(null);
+  const [yonseiText, setYonseiText] = useState("");
   const [selectedPara, setSelectedPara] = useState<{
     title: string;
     text: string;
@@ -592,6 +640,8 @@ export default function DictationPracticeScreen() {
   const resetAll = () => {
     setStep("source_selection");
     setSelectedPara(null);
+    setSelectedYonseiTopic(null);
+    setYonseiText("");
     setWordParts([]);
     setShowResult(false);
     stopAudio();
@@ -605,35 +655,127 @@ export default function DictationPracticeScreen() {
     />
   );
 
-  const renderSampleList = () => (
-    <FlatList
-      data={MOCK_LISTENING_PARAGRAPHS as unknown as ParagraphData[]}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.scrollContent}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          onPress={() => processTextForPractice(item.fullKorean, item.title)}
-          activeOpacity={0.7}
-        >
-          <Card variant="outlined" style={styles.sampleItem}>
-            <Text style={styles.sampleTitle}>{item.title}</Text>
-            <Text style={styles.sampleSnippet} numberOfLines={2}>
-              {item.fullKorean}
-            </Text>
-            <View style={styles.sampleMeta}>
-              <Badge label={item.difficulty} variant="accent" />
-              <Text style={styles.sampleLength}>
-                {item.fullKorean.length} ký tự
+  const renderSampleList = () => {
+    const filteredTopics = YONSEI_TOPICS.filter((t) => t.level === selectedLevel);
+
+    return (
+      <View style={{ flex: 1 }}>
+        <View style={styles.tabContainerWrapper}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContent}>
+            {["Sơ cấp 1", "Sơ cấp 2", "Trung cấp 1", "Trung cấp 2", "Cao cấp 1", "Cao cấp 2"].map((lvl) => {
+              const isActive = selectedLevel === lvl;
+              return (
+                <TouchableOpacity
+                  key={lvl}
+                  onPress={() => setSelectedLevel(lvl)}
+                  style={[styles.levelTab, isActive && styles.levelTabActive]}
+                >
+                  <Text style={[styles.levelTabText, isActive && styles.levelTabTextActive]}>
+                    {lvl}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <FlatList
+          data={filteredTopics}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.scrollContent}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedYonseiTopic(item);
+                setStep("yonsei_input");
+              }}
+              activeOpacity={0.7}
+            >
+              <Card variant="outlined" style={styles.yonseiTopicCard}>
+                <View style={styles.yonseiTopicInfo}>
+                  <Text style={styles.yonseiTopicTitle}>
+                    {item.title} <Text style={styles.yonseiTopicVietnamese}>({item.vietnamese})</Text>
+                  </Text>
+                  <Text style={styles.yonseiTopicBook}>{item.book}</Text>
+                </View>
+                <View style={styles.yonseiPageBadge}>
+                  <Text style={styles.yonseiPageText}>Trang {item.page}</Text>
+                </View>
+              </Card>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+    );
+  };
+
+  const renderYonseiInput = () => {
+    if (!selectedYonseiTopic) return null;
+
+    return (
+      <View style={styles.manualContainer}>
+        <Card variant="elevated" style={styles.yonseiGuideCard}>
+          <View style={styles.yonseiGuideHeader}>
+            <View style={styles.yonseiGuideIconBox}>
+              <Ionicons name="book" size={24} color={Colors.primary} />
+            </View>
+            <View style={styles.yonseiGuideInfo}>
+              <Text style={styles.yonseiGuideTitle}>
+                Bài học: {selectedYonseiTopic.title} ({selectedYonseiTopic.vietnamese})
+              </Text>
+              <Text style={styles.yonseiGuideSubtitle}>
+                {selectedYonseiTopic.book} • TRANG {selectedYonseiTopic.page}
               </Text>
             </View>
-          </Card>
-        </TouchableOpacity>
-      )}
-    />
-  );
+          </View>
+          <Text style={styles.yonseiGuideDesc}>
+            Vui lòng dán nội dung bài học từ giáo trình vào ô bên dưới để bắt đầu rèn luyện.
+          </Text>
+        </Card>
+
+        <View style={styles.manualInputHeader}>
+          <Text style={styles.manualInputLabel}>NỘI DUNG BÀI HỌC</Text>
+          <TouchableOpacity onPress={() => setYonseiText("")} style={styles.clearBtn}>
+            <Ionicons name="trash-outline" size={16} color={Colors.primary} />
+            <Text style={styles.clearBtnText}>XÓA SẠCH</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Card variant="default" style={styles.inputCard}>
+          <TextInput
+            style={styles.manualTextInput}
+            placeholder="Dán văn bản bài học tại đây..."
+            multiline
+            value={yonseiText}
+            onChangeText={setYonseiText}
+            textAlignVertical="top"
+          />
+        </Card>
+
+        <Button
+          title="BẮT ĐẦU BÀI HỌC"
+          onPress={() =>
+            processTextForPractice(yonseiText, `${selectedYonseiTopic.title} (Trang ${selectedYonseiTopic.page})`)
+          }
+          fullWidth
+          size="lg"
+          disabled={yonseiText.trim().length < 10}
+          style={styles.startBtn}
+        />
+      </View>
+    );
+  };
 
   const renderManualInput = () => (
     <View style={styles.manualContainer}>
+      <View style={styles.manualInputHeader}>
+        <Text style={styles.manualInputLabel}>TỰ NHẬP VĂN BẢN</Text>
+        <TouchableOpacity onPress={() => setManualText("")} style={styles.clearBtn}>
+          <Ionicons name="trash-outline" size={16} color={Colors.primary} />
+          <Text style={styles.clearBtnText}>XÓA SẠCH</Text>
+        </TouchableOpacity>
+      </View>
+
       <Card variant="default" style={styles.inputCard}>
         <TextInput
           style={styles.manualTitleInput}
@@ -651,7 +793,7 @@ export default function DictationPracticeScreen() {
         />
       </Card>
       <Button
-        title="Bắt đầu luyện tập"
+        title="BẮT ĐẦU BÀI HỌC"
         onPress={() =>
           processTextForPractice(manualText, manualTitle || "Bài tự nhập")
         }
@@ -905,6 +1047,24 @@ export default function DictationPracticeScreen() {
     );
   };
 
+  const handleBack = () => {
+    if (step === "source_selection") {
+      router.back();
+    } else if (step === "yonsei_input") {
+      setStep("sample_list");
+    } else if (step === "sample_list" || step === "manual_input") {
+      setStep("source_selection");
+    } else if (step === "setup") {
+      if (selectedYonseiTopic) {
+        setStep("yonsei_input");
+      } else {
+        setStep("manual_input");
+      }
+    } else {
+      resetAll();
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -913,9 +1073,7 @@ export default function DictationPracticeScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() =>
-              step === "source_selection" ? router.back() : resetAll()
-            }
+            onPress={handleBack}
             style={styles.backBtn}
           >
             <Ionicons
@@ -952,6 +1110,7 @@ export default function DictationPracticeScreen() {
 
         {step === "source_selection" && renderSourceSelection()}
         {step === "sample_list" && renderSampleList()}
+        {step === "yonsei_input" && renderYonseiInput()}
         {step === "manual_input" && renderManualInput()}
         {step === "setup" && renderSetup()}
         {step === "practice" && renderPractice()}
@@ -1193,6 +1352,139 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     lineHeight: 24,
+  },
+  tabContainerWrapper: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 10,
+    backgroundColor: '#FAF9FB',
+  },
+  tabScrollContent: {
+    gap: 8,
+    paddingRight: 16,
+  },
+  levelTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: Radius.full,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  levelTabActive: {
+    backgroundColor: '#EF5FA0',
+    borderColor: '#EF5FA0',
+  },
+  levelTabText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: Typography.weights.semibold,
+  },
+  levelTabTextActive: {
+    color: '#FFF',
+    fontWeight: Typography.weights.bold,
+  },
+  yonseiTopicCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: Radius.lg,
+    backgroundColor: '#FFF',
+  },
+  yonseiTopicInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  yonseiTopicTitle: {
+    fontSize: 16,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  yonseiTopicVietnamese: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: Typography.weights.medium,
+  },
+  yonseiTopicBook: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: Typography.weights.semibold,
+  },
+  yonseiPageBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.lg,
+    backgroundColor: '#FFF0F3',
+  },
+  yonseiPageText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: Typography.weights.bold,
+  },
+  yonseiGuideCard: {
+    padding: 18,
+    borderRadius: Radius.xl,
+    backgroundColor: '#FAF5FF',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.1)',
+    marginBottom: 20,
+  },
+  yonseiGuideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  yonseiGuideIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  yonseiGuideInfo: {
+    flex: 1,
+  },
+  yonseiGuideTitle: {
+    fontSize: 16,
+    fontWeight: Typography.weights.bold,
+    color: '#111827',
+  },
+  yonseiGuideSubtitle: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: Typography.weights.bold,
+    marginTop: 2,
+  },
+  yonseiGuideDesc: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  manualInputHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  manualInputLabel: {
+    fontSize: 12,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  clearBtnText: {
+    fontSize: 12,
+    fontWeight: Typography.weights.bold,
+    color: Colors.primary,
   },
   startBtn: {
     marginTop: "auto",

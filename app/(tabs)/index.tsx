@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Card, ProgressBar, Badge } from "@/components/ui";
@@ -141,32 +141,53 @@ export default function HomeScreen() {
           </LinearGradient>
         </View>
 
-        {/* Daily Stats Summary */}
-        <View style={styles.statsOverviewRow}>
-          <Card variant="elevated" style={styles.statMiniCard}>
-            <Ionicons name="flame" size={18} color="#FF96BB" />
-            <Text style={styles.statMiniVal}>{stats ? stats.streak : (user ? user.streak : 0)}</Text>
-            <Text style={styles.statMiniLabel}>Ngày chuỗi</Text>
-          </Card>
-          <Card variant="elevated" style={styles.statMiniCard}>
-            <Ionicons name="flash" size={18} color="#FBBF24" />
-            <Text style={styles.statMiniVal}>{(stats ? stats.xp : (user ? user.xp : 0)).toLocaleString()}</Text>
-            <Text style={styles.statMiniLabel}>Kinh nghiệm</Text>
-          </Card>
-          <Card variant="elevated" style={styles.statMiniCard}>
-            <Ionicons name="checkmark-circle" size={18} color="#34D399" />
-            <Text style={styles.statMiniVal}>{stats ? stats.completedLessons : (user ? user.completedLessons : 0)}</Text>
-            <Text style={styles.statMiniLabel}>Bài đã học</Text>
-          </Card>
-          <Card variant="elevated" style={styles.statMiniCard}>
-            <Ionicons name="ribbon" size={18} color="#8B5CF6" />
-            <Text style={styles.statMiniVal}>
-              {stats 
-                ? (stats.totalExams + stats.totalDictations + stats.masteredFlashcards) 
-                : (user ? (user.completedPractices || 0) : 0)}
-            </Text>
-            <Text style={styles.statMiniLabel}>Bài đã luyện</Text>
-          </Card>
+        {/* Daily Stats Summary - 2x2 Modern Premium Grid */}
+        <View style={styles.statsGrid}>
+          {/* Column Left */}
+          <View style={styles.statsCol}>
+            {/* Card 1: Streak */}
+            <Card variant="elevated" style={styles.statGridCard}>
+              <View style={[styles.statIconBox, { backgroundColor: '#FCE7F3' }]}>
+                <Ionicons name="flame" size={24} color="#EF5FA0" />
+              </View>
+              <Text style={styles.statVal}>{stats ? stats.streak : (user ? user.streak : 0)}</Text>
+              <Text style={styles.statLabel}>Ngày chuỗi</Text>
+            </Card>
+
+            {/* Card 3: Lessons Completed */}
+            <Card variant="elevated" style={styles.statGridCard}>
+              <View style={[styles.statIconBox, { backgroundColor: '#D1FAE5' }]}>
+                <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+              </View>
+              <Text style={styles.statVal}>{stats ? stats.completedLessons : (user ? user.completedLessons : 0)}</Text>
+              <Text style={styles.statLabel}>Bài đã học từ mới</Text>
+            </Card>
+          </View>
+
+          {/* Column Right */}
+          <View style={styles.statsCol}>
+            {/* Card 2: XP */}
+            <Card variant="elevated" style={styles.statGridCard}>
+              <View style={[styles.statIconBox, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="flash" size={24} color="#FBBF24" />
+              </View>
+              <Text style={styles.statVal}>{(stats ? stats.xp : (user ? user.xp : 0)).toLocaleString()}</Text>
+              <Text style={styles.statLabel}>Kinh nghiệm</Text>
+            </Card>
+
+            {/* Card 4: Practice Completed */}
+            <Card variant="elevated" style={styles.statGridCard}>
+              <View style={[styles.statIconBox, { backgroundColor: '#F3E8FF' }]}>
+                <Ionicons name="ribbon" size={24} color="#8B5CF6" />
+              </View>
+              <Text style={styles.statVal}>
+                {stats 
+                  ? (stats.totalExams + stats.totalDictations + stats.masteredFlashcards) 
+                  : (user ? (user.completedPractices || 0) : 0)}
+              </Text>
+              <Text style={styles.statLabel}>Bài đã luyện ghi nhớ</Text>
+            </Card>
+          </View>
         </View>
 
         {/* Quick Actions Grid */}
@@ -215,11 +236,11 @@ export default function HomeScreen() {
             >
               <View style={styles.customCTALeft}>
                 <View style={styles.customCTAIconBox}>
-                  <Ionicons name="headset" size={26} color="#8B5CF6" />
+                  <MaterialCommunityIcons name="brain" size={26} color="#8B5CF6" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.customCTATitle}>
-                    Luyện nghe & Dictation
+                    Rèn luyện kỹ năng ghi nhớ
                   </Text>
                   <Text style={styles.customCTASub}>
                     Học qua điền từ vựng khi nghe văn bản
@@ -234,7 +255,7 @@ export default function HomeScreen() {
         {/* Tip of the day */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Gợi ý hôm nay</Text>
+            <Text style={styles.sectionTitle}>Góc văn hoá</Text>
           </View>
           <Card style={styles.tipCard} variant="elevated">
             <View style={styles.tipContent}>
@@ -333,30 +354,47 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.medium,
     fontStyle: "italic",
   },
-  statsOverviewRow: {
+  statsGrid: {
     flexDirection: "row",
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: Spacing.base,
     marginTop: 25,
     gap: 12,
   },
-  statMiniCard: {
+  statsCol: {
     flex: 1,
+    gap: 12,
+  },
+  statGridCard: {
     alignItems: "center",
-    paddingVertical: 16,
+    justifyContent: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 12,
     borderRadius: Radius["2xl"],
     backgroundColor: Colors.white,
-    gap: 4,
+    ...Shadows.sm,
+    borderWidth: 1,
+    borderColor: "rgba(239, 95, 160, 0.05)",
   },
-  statMiniVal: {
-    fontSize: 18,
+  statIconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  statVal: {
+    fontSize: 20,
     fontWeight: Typography.weights.extrabold,
     color: Colors.textPrimary,
+    textAlign: "center",
   },
-  statMiniLabel: {
-    fontSize: 10,
-    color: Colors.textTertiary,
+  statLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
     fontWeight: Typography.weights.bold,
-    textTransform: "uppercase",
+    textAlign: "center",
+    lineHeight: 16,
   },
   section: {
     marginTop: 35,

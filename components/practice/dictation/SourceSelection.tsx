@@ -12,27 +12,27 @@ interface SourceSelectionProps {
 export function SourceSelection({ onSelectSample, onSelectManual }: SourceSelectionProps) {
   return (
     <ScrollView contentContainerStyle={styles.scrollContent}>
-      <TouchableOpacity onPress={onSelectSample} activeOpacity={0.7}>
-        <Card variant="elevated" style={styles.sourceCard}>
-          <View style={styles.sourceIconContainer}>
-            <Ionicons name="library" size={32} color={Colors.primary} />
-          </View>
-          <View style={styles.sourceInfo}>
-            <Text style={styles.sourceTitle}>Chọn bài mẫu</Text>
-            <Text style={styles.sourceDesc}>Luyện tập với các bài đọc từ giáo trình Yonsei</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color={Colors.textTertiary} />
-        </Card>
-      </TouchableOpacity>
-
       <TouchableOpacity onPress={onSelectManual} activeOpacity={0.7}>
         <Card variant="elevated" style={styles.sourceCard}>
           <View style={styles.sourceIconContainer}>
             <Ionicons name="create" size={32} color={Colors.accent} />
           </View>
           <View style={styles.sourceInfo}>
-            <Text style={styles.sourceTitle}>Nhập văn bản mới</Text>
+            <Text style={styles.sourceTitle}>Tự nhập văn bản</Text>
             <Text style={styles.sourceDesc}>Dán đoạn văn bạn muốn luyện nghe vào đây</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color={Colors.textTertiary} />
+        </Card>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={onSelectSample} activeOpacity={0.7}>
+        <Card variant="elevated" style={styles.sourceCard}>
+          <View style={styles.sourceIconContainer}>
+            <Ionicons name="library" size={32} color={Colors.primary} />
+          </View>
+          <View style={styles.sourceInfo}>
+            <Text style={styles.sourceTitle}>Luyện cùng nội dung giáo trình New Yonsei Korean</Text>
+            <Text style={styles.sourceDesc}>Luyện tập với các bài đọc từ giáo trình Yonsei</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color={Colors.textTertiary} />
         </Card>

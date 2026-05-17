@@ -50,7 +50,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colorScheme === 'dark' ? DarkColors.background : Colors.white } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colorScheme === 'dark' ? DarkColors.background : Colors.background } }}>
         {/* Auth Group */}
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
 
