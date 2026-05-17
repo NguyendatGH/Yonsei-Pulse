@@ -318,8 +318,8 @@ export default function StatsScreen() {
                  </View>
                  
                  <View style={styles.certExplainBox}>
-                    <Text style={styles.certTitleTxt}>Chỉ số thi thử</Text>
-                    <Text style={styles.certSubtitleTxt}>Đại diện cho năng lực tổng quát tiếng Hàn của học viên.</Text>
+                     <Text style={styles.certTitleTxt}>Tốc độ ghi nhớ</Text>
+                     <Text style={styles.certSubtitleTxt}>Đại diện cho khả năng ghi nhớ từ khóa và từ vựng tiếng Hàn của học viên.</Text>
                  </View>
               </View>
               
