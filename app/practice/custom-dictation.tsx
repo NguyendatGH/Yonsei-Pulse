@@ -116,6 +116,7 @@ export default function DictationPracticeScreen() {
   const [manualText, setManualText] = useState("");
   const [manualTitle, setManualTitle] = useState("");
   const [blankCount, setBlankCount] = useState<number>(5);
+  const [customKeywords, setCustomKeywords] = useState("");
 
   const [wordParts, setWordParts] = useState<WordPart[]>([]);
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -256,7 +257,8 @@ export default function DictationPracticeScreen() {
     }
     const wordCount = text.split(/\s+/).length;
     setSelectedPara({ title, text, wordCount });
-    setBlankCount(Math.min(5, Math.floor(wordCount * 0.3)));
+    setBlankCount(5);
+    setCustomKeywords("");
     setStep("setup");
   };
 
@@ -266,16 +268,22 @@ export default function DictationPracticeScreen() {
 
     const text = selectedPara.text;
     const words = text.split(/\s+/);
-    const count = Math.min(blankCount, words.length);
 
-    const indices = [...Array(words.length).keys()];
-    const shuffled = indices.sort(() => Math.random() - 0.5);
-    const blankIndices = new Set(shuffled.slice(0, count));
+    const keywordsToHide = customKeywords
+      .split(',')
+      .map(k => k.trim().toLowerCase())
+      .filter(k => k.length > 0);
 
     let lastFoundIndex = 0;
     const parts: WordPart[] = words.map((word, index) => {
-      const cleanWord = word.replace(/[.,!?]/g, "");
-      const isBlank = blankIndices.has(index) && cleanWord.length > 1;
+      // Strip punctuation broadly; trim whitespace to handle encoding edge cases
+      const cleanWord = word.replace(/[.,!?;:'"()\[\]{}<>\/\\|@#$%^&*~`]/g, "").trim();
+      const cleanWordLower = cleanWord.toLowerCase().trim();
+      
+      const isDensityHidden = (index + 1) % blankCount === 0;
+      const isKeywordHidden = keywordsToHide.some(k => k === cleanWordLower || cleanWordLower === k.trim());
+      
+      const isBlank = (isDensityHidden && cleanWord.length > 0) || (isKeywordHidden && cleanWord.length > 0);
 
       const charStart = text.indexOf(word, lastFoundIndex);
       if (charStart !== -1) {
@@ -839,15 +847,15 @@ export default function DictationPracticeScreen() {
         </View>
 
         <View style={styles.setupSection}>
-          <Text style={styles.setupLabel}>Số từ bị ẩn</Text>
+          <Text style={styles.setupLabel}>Mật độ ẩn từ</Text>
           <Text style={styles.setupDesc}>
-            Đoạn văn có {selectedPara?.wordCount || 0} từ - chọn số từ cần ẩn
+            Cứ sau mỗi bao nhiêu từ thì ẩn 1 từ? (Ví dụ: 5 = cứ 5 từ ẩn 1 từ)
           </Text>
 
           <View style={styles.blankCountContainer}>
             <TouchableOpacity
               style={styles.blankCountBtn}
-              onPress={() => setBlankCount(Math.max(1, blankCount - 1))}
+              onPress={() => setBlankCount(Math.max(2, blankCount - 1))}
             >
               <Ionicons name="remove" size={24} color={Colors.primary} />
             </TouchableOpacity>
@@ -859,32 +867,25 @@ export default function DictationPracticeScreen() {
 
             <TouchableOpacity
               style={styles.blankCountBtn}
-              onPress={() =>
-                setBlankCount(
-                  Math.min(selectedPara?.wordCount || 10, blankCount + 1),
-                )
-              }
+              onPress={() => setBlankCount(Math.min(20, blankCount + 1))}
             >
               <Ionicons name="add" size={24} color={Colors.primary} />
             </TouchableOpacity>
           </View>
+        </View>
 
-          <View style={styles.blankSliderContainer}>
-            <Text style={styles.blankSliderLabel}>
-              Tỷ lệ:{" "}
-              {Math.round((blankCount / (selectedPara?.wordCount || 1)) * 100)}%
-            </Text>
-            <View style={styles.blankSliderTrack}>
-              <View
-                style={[
-                  styles.blankSliderFill,
-                  {
-                    width: `${(blankCount / (selectedPara?.wordCount || 1)) * 100}%`,
-                  },
-                ]}
-              />
-            </View>
-          </View>
+        <View style={styles.setupSection}>
+          <Text style={styles.setupLabel}>Từ khóa muốn ẩn (tùy chọn)</Text>
+          <Text style={styles.setupDesc}>
+            Nhập các từ cần ẩn riêng, cách nhau bởi dấu phẩy (VD: 학교, 학생)
+          </Text>
+          <TextInput
+            style={[styles.manualTextInput, { minHeight: 60, padding: 12, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }]}
+            placeholder="Nhập từ khóa (cách nhau bởi dấu phẩy)..."
+            value={customKeywords}
+            onChangeText={setCustomKeywords}
+            multiline
+          />
         </View>
 
         <View style={styles.setupSection}>
