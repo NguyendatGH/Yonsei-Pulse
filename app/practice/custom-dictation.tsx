@@ -1011,7 +1011,7 @@ export default function DictationPracticeScreen() {
                     return styles.wordCorrect;
                   }
                   if (correct.toLowerCase().startsWith(input.toLowerCase())) {
-                    return { borderBottomColor: '#3B82F6', color: '#3B82F6' };
+                    return { borderColor: '#3B82F6', color: '#3B82F6', backgroundColor: '#EFF6FF' };
                   }
                   return styles.wordWrong;
                 };
@@ -1106,7 +1106,7 @@ export default function DictationPracticeScreen() {
               color={Colors.textPrimary}
             />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nghe & Điền từ</Text>
+          <Text style={styles.headerTitle}>Ghi nhớ & điền từ</Text>
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
             {availableVoices.length > 1 && (
               <TouchableOpacity style={styles.infoBtn} onPress={() => setShowVoiceSettings(true)}>
@@ -1841,27 +1841,32 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.extrabold,
   },
   wordInput: {
-    minWidth: 40,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.primary,
-    fontSize: 18,
+    minWidth: 50,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 8,
+    fontSize: 16,
     textAlign: "center",
-    padding: 0,
-    height: 30,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    height: 36,
     color: Colors.primary,
     fontWeight: Typography.weights.bold,
   },
   activeWordInput: {
-    borderBottomWidth: 3,
-    borderBottomColor: Colors.primary,
+    borderWidth: 2,
+    borderColor: Colors.primary,
     backgroundColor: "#FFF1F2",
   },
   wordCorrect: {
-    borderBottomColor: "#10B981",
+    borderColor: "#10B981",
+    backgroundColor: "#ECFDF5",
     color: "#10B981",
   },
   wordWrong: {
-    borderBottomColor: "#EF4444",
+    borderColor: "#EF4444",
+    backgroundColor: "#FEF2F2",
     color: "#EF4444",
   },
   answerText: {
