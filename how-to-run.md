@@ -29,7 +29,7 @@ cd Yonsei-Pulse
 npm install
 
 # 3. Khởi chạy Expo
-npx expo start
+npx expo start --tunnel
 ```
 
 ### 🐧 Ubuntu / Linux
@@ -90,7 +90,7 @@ Sau đó truy cập **http://localhost:8081** trên trình duyệt.
 **Lỗi: `Unable to resolve module`**
 ```bash
 npm install
-npx expo start --clear
+npx expo start --c
 ```
 
 **Lỗi: `Network response timed out` khi scan QR**
@@ -120,4 +120,3 @@ Yonsei-Pulse/
 
 ---
 
-Made with ❤️ by Yonsei Pulse Team
