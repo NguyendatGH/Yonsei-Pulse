@@ -42,12 +42,23 @@ export function useUser() {
     }
   };
 
+  const incrementCompletedPractices = async (count = 1) => {
+    if (!user) return;
+    try {
+      await userRepo.updateCompletedPractices(user.id, count);
+      await fetchUser();
+    } catch (err) {
+      console.error('Failed to update completed practices:', err);
+    }
+  };
+
   return {
     user,
     loading,
     error,
     addXp,
     updateStreak,
+    incrementCompletedPractices,
     refreshUser: fetchUser
   };
 }

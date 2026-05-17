@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -7,31 +7,60 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Card, ProgressBar, Badge } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
-import { useUser } from '@/hooks/use-user';
-import { useCourses } from '@/hooks/use-courses';
-import { useTheme } from '@/hooks/use-theme';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter, useFocusEffect } from "expo-router";
+import { Card, ProgressBar, Badge } from "@/components/ui";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  Radius,
+  Shadows,
+} from "@/constants/theme";
+import { useUser } from "@/hooks/use-user";
+import { useCourses } from "@/hooks/use-courses";
+import { useTheme } from "@/hooks/use-theme";
 import {
   MOCK_DAILY_STATS,
   MOCK_QUICK_ACTIONS,
   MOCK_CULTURE_TIPS,
-} from '@/constants/mock-data';
-import { Image } from 'expo-image';
+} from "@/constants/mock-data";
+import { Image } from "expo-image";
+import { statsRepo } from "@/db/repos/statsRepo";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, loading: userLoading } = useUser();
+  const { user, loading: userLoading, refreshUser } = useUser();
   const { courses, loading: coursesLoading } = useCourses();
   const { theme, isDark } = useTheme();
+  const [stats, setStats] = React.useState<any>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let isMounted = true;
+      const loadRealStats = async () => {
+        try {
+          const s = await statsRepo.getStats();
+          if (isMounted) {
+            setStats(s);
+          }
+          await refreshUser();
+        } catch (err) {
+          console.error("Failed to load stats on home:", err);
+        }
+      };
+      loadRealStats();
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
 
   const getDayOfYear = (date: Date) => {
     const start = new Date(date.getFullYear(), 0, 0);
@@ -45,15 +74,17 @@ export default function HomeScreen() {
 
   const getGreeting = (): string => {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return 'CHÀO BUỔI SÁNG';
-    if (hour >= 12 && hour < 18) return 'CHÀO BUỔI CHIỀU';
-    if (hour >= 18 && hour < 22) return 'CHÀO BUỔI TỐI';
-    return 'CHÀO BUỔI ĐÊM';
+    if (hour >= 5 && hour < 12) return "CHÀO BUỔI SÁNG";
+    if (hour >= 12 && hour < 18) return "CHÀO BUỔI CHIỀU";
+    if (hour >= 18 && hour < 22) return "CHÀO BUỔI TỐI";
+    return "CHÀO BUỔI ĐÊM";
   };
 
   if (userLoading || coursesLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+      <View
+        style={[styles.loadingContainer, { backgroundColor: theme.background }]}
+      >
         <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
@@ -61,175 +92,163 @@ export default function HomeScreen() {
 
   if (!user || courses.length === 0) return null;
 
-  // Find the active course: prefer in-progress, else first unlocked
-  const activeCourse = courses.find(c => c.progress > 0 && c.progress < 1) || courses.find(c => !c.locked) || courses[0];
+
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 10 },
+        ]}
       >
         {/* Banner Section */}
         <View style={styles.bannerContainer}>
-           <Image 
-             source={require('@/assets/images/greeting.png')} 
-             style={styles.bannerImage} 
-             contentFit="cover"
-             transition={400}
-           />
-           <LinearGradient 
-              colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']} 
-              style={styles.bannerOverlay}
-           >
-              <View style={styles.headerTop}>
-                 <View>
-                    <Text style={styles.bannerSub}>{getGreeting()}</Text>
-                    <Text style={styles.bannerMain}>An-nyeong, {user.name}! ✨</Text>
-                 </View>
-                 <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.8}>
-                    <Image 
-                      source={user.avatar ? { uri: user.avatar } : require('@/assets/images/user_avatar.png')} 
-                      style={styles.avatarImage} 
-                      contentFit="cover"
-                    />
-                 </TouchableOpacity>
+          <Image
+            source={require("@/assets/images/greeting.png")}
+            style={styles.bannerImage}
+            contentFit="cover"
+            transition={400}
+          />
+          <LinearGradient
+            colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.6)"]}
+            style={styles.bannerOverlay}
+          >
+            <View style={styles.headerTop}>
+              <View>
+                <Text style={styles.bannerSub}>{getGreeting()}</Text>
+                <Text style={styles.bannerMain}>안녕하세요, {user.name}! ✨</Text>
               </View>
+              <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.8}>
+                <Image
+                  source={
+                    user.avatar
+                      ? { uri: user.avatar }
+                      : require("@/assets/images/user_avatar.png")
+                  }
+                  style={styles.avatarImage}
+                  contentFit="cover"
+                />
+              </TouchableOpacity>
+            </View>
 
-              <View style={styles.dailyQuoteBox}>
-                 <Text style={styles.quoteText}>&quot;Hành trình vạn dặm bắt đầu từ một bước chân.&quot;</Text>
-              </View>
-           </LinearGradient>
+            <View style={styles.dailyQuoteBox}>
+              <Text style={styles.quoteText}>
+                &quot;Hành trình vạn dặm bắt đầu từ một bước chân.&quot;
+              </Text>
+            </View>
+          </LinearGradient>
         </View>
 
         {/* Daily Stats Summary */}
         <View style={styles.statsOverviewRow}>
-           <Card variant="elevated" style={styles.statMiniCard}>
-              <Ionicons name="flame" size={20} color="#FF96BB" />
-              <Text style={styles.statMiniVal}>{user.streak}</Text>
-              <Text style={styles.statMiniLabel}>Ngày chuỗi</Text>
-           </Card>
-           <Card variant="elevated" style={styles.statMiniCard}>
-              <Ionicons name="flash" size={20} color="#FBBF24" />
-              <Text style={styles.statMiniVal}>{user.xp}</Text>
-              <Text style={styles.statMiniLabel}>Kinh nghiệm</Text>
-           </Card>
-           <Card variant="elevated" style={styles.statMiniCard}>
-              <Ionicons name="checkmark-circle" size={20} color="#34D399" />
-              <Text style={styles.statMiniVal}>{user.completedLessons}</Text>
-              <Text style={styles.statMiniLabel}>Bài đã học</Text>
-           </Card>
+          <Card variant="elevated" style={styles.statMiniCard}>
+            <Ionicons name="flame" size={18} color="#FF96BB" />
+            <Text style={styles.statMiniVal}>{stats ? stats.streak : (user ? user.streak : 0)}</Text>
+            <Text style={styles.statMiniLabel}>Ngày chuỗi</Text>
+          </Card>
+          <Card variant="elevated" style={styles.statMiniCard}>
+            <Ionicons name="flash" size={18} color="#FBBF24" />
+            <Text style={styles.statMiniVal}>{(stats ? stats.xp : (user ? user.xp : 0)).toLocaleString()}</Text>
+            <Text style={styles.statMiniLabel}>Kinh nghiệm</Text>
+          </Card>
+          <Card variant="elevated" style={styles.statMiniCard}>
+            <Ionicons name="checkmark-circle" size={18} color="#34D399" />
+            <Text style={styles.statMiniVal}>{stats ? stats.completedLessons : (user ? user.completedLessons : 0)}</Text>
+            <Text style={styles.statMiniLabel}>Bài đã học</Text>
+          </Card>
+          <Card variant="elevated" style={styles.statMiniCard}>
+            <Ionicons name="ribbon" size={18} color="#8B5CF6" />
+            <Text style={styles.statMiniVal}>
+              {stats 
+                ? (stats.totalExams + stats.totalDictations + stats.masteredFlashcards) 
+                : (user ? (user.completedPractices || 0) : 0)}
+            </Text>
+            <Text style={styles.statMiniLabel}>Bài đã luyện</Text>
+          </Card>
         </View>
 
         {/* Quick Actions Grid */}
         <View style={styles.section}>
-           <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Luyện tập nhanh</Text>
-           </View>
-           <View style={styles.quickActionGrid}>
-              {MOCK_QUICK_ACTIONS.filter(a => a.id !== 'custom').map((action) => (
-                <TouchableOpacity 
-                   key={action.id} 
-                   style={styles.actionItem} 
-                   activeOpacity={0.8}
-                   onPress={() => router.push(action.route as any)}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Luyện tập nhanh</Text>
+          </View>
+          <View style={styles.quickActionGrid}>
+            {MOCK_QUICK_ACTIONS.filter((a) => a.id !== "custom").map(
+              (action) => (
+                <TouchableOpacity
+                  key={action.id}
+                  style={styles.actionItem}
+                  activeOpacity={0.8}
+                  onPress={() => router.push(action.route as any)}
                 >
-                   <LinearGradient
-                      colors={[`${action.color}22`, `${action.color}44`]}
-                      style={styles.actionIconBox}
-                   >
-                      <Ionicons name={`${action.icon}-outline` as any} size={32} color={action.color} />
-                   </LinearGradient>
-                   <Text style={styles.actionLabel}>{action.title}</Text>
+                  <LinearGradient
+                    colors={[`${action.color}22`, `${action.color}44`]}
+                    style={styles.actionIconBox}
+                  >
+                    <Ionicons
+                      name={`${action.icon}-outline` as any}
+                      size={32}
+                      color={action.color}
+                    />
+                  </LinearGradient>
+                  <Text style={styles.actionLabel}>{action.title}</Text>
                 </TouchableOpacity>
-              ))}
-           </View>
+              ),
+            )}
+          </View>
         </View>
 
         {/* Custom Content CTA */}
         <View style={styles.section}>
-            <TouchableOpacity 
-               style={styles.customCTACard} 
-               activeOpacity={0.9}
-               onPress={() => router.push('/practice/custom-dictation')}
+          <TouchableOpacity
+            style={styles.customCTACard}
+            activeOpacity={0.9}
+            onPress={() => router.push("/practice/custom-dictation")}
+          >
+            <LinearGradient
+              colors={["#8B5CF6", "#7C3AED"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.customCTAGradient}
             >
-               <LinearGradient
-                  colors={['#8B5CF6', '#7C3AED']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.customCTAGradient}
-               >
-                  <View style={styles.customCTALeft}>
-                     <View style={styles.customCTAIconBox}>
-                        <Ionicons name="headset" size={26} color="#8B5CF6" />
-                     </View>
-                     <View style={{ flex: 1 }}>
-                        <Text style={styles.customCTATitle}>Luyện nghe & Dictation</Text>
-                        <Text style={styles.customCTASub}>Học qua điền từ vựng khi nghe văn bản</Text>
-                     </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={24} color={Colors.white} />
-               </LinearGradient>
-            </TouchableOpacity>
-        </View>
-
-        {/* Current Lesson Pathway */}
-        <View style={styles.section}>
-           <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Đang học tiếp</Text>
-              <TouchableOpacity><Text style={styles.seeAll}>Lộ trình</Text></TouchableOpacity>
-           </View>
-           
-           <TouchableOpacity style={styles.activeCourseCard} activeOpacity={0.9}>
-              <LinearGradient 
-                colors={[Colors.primary, '#F28C9D']} 
-                start={{ x: 0, y: 0 }} 
-                end={{ x: 1, y: 1 }} 
-                style={styles.activeCourseGrad}
-              >
-                 <View style={styles.activeCourseTop}>
-                    <View style={styles.courseIconCircle}>
-                       <Ionicons name="school" size={26} color={Colors.white} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                       <Text style={styles.activeCourseTitle}>{activeCourse.title}</Text>
-                       <Text style={styles.activeCourseSub}>Chủ đề: {activeCourse.description}</Text>
-                    </View>
-                 </View>
-                 <View style={styles.activeCourseProgress}>
-                    <View style={styles.progHeader}>
-                       <Text style={styles.progText}>Tiến trình khóa học</Text>
-                       <Text style={styles.progPerc}>{Math.round(activeCourse.progress * 100)}%</Text>
-                    </View>
-                    <ProgressBar 
-                       progress={activeCourse.progress} 
-                       height={8} 
-                       color={Colors.white} 
-                       backgroundColor="rgba(255,255,255,0.2)" 
-                    />
-                 </View>
-              </LinearGradient>
-           </TouchableOpacity>
+              <View style={styles.customCTALeft}>
+                <View style={styles.customCTAIconBox}>
+                  <Ionicons name="headset" size={26} color="#8B5CF6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.customCTATitle}>
+                    Luyện nghe & Dictation
+                  </Text>
+                  <Text style={styles.customCTASub}>
+                    Học qua điền từ vựng khi nghe văn bản
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={Colors.white} />
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
         {/* Tip of the day */}
         <View style={styles.section}>
-           <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Gợi ý hôm nay</Text>
-           </View>
-           <Card style={styles.tipCard} variant="elevated">
-              <View style={styles.tipContent}>
-                 <View style={styles.tipIconBox}>
-                    <Ionicons name="bulb" size={24} color={Colors.primary} />
-                 </View>
-                 <View style={{ flex: 1 }}>
-                    <Text style={styles.tipTitle}>{cultureTip.title}</Text>
-                    <Text style={styles.tipDesc} numberOfLines={2}>
-                       {cultureTip.description}
-                    </Text>
-                 </View>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Gợi ý hôm nay</Text>
+          </View>
+          <Card style={styles.tipCard} variant="elevated">
+            <View style={styles.tipContent}>
+              <View style={styles.tipIconBox}>
+                <Ionicons name="bulb" size={24} color={Colors.primary} />
               </View>
-           </Card>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tipTitle}>{cultureTip.title}</Text>
+                <Text style={styles.tipDesc} numberOfLines={2}>
+                  {cultureTip.description}
+                </Text>
+              </View>
+            </View>
+          </Card>
         </View>
 
         <View style={{ height: 120 }} />
@@ -241,13 +260,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9FB',
+    backgroundColor: "#FAF9FB",
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FAF9FB',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FAF9FB",
   },
   scrollContent: {
     paddingBottom: 20,
@@ -255,32 +274,32 @@ const styles = StyleSheet.create({
   bannerContainer: {
     height: 220,
     marginHorizontal: Spacing.xl,
-    borderRadius: Radius['3xl'],
-    overflow: 'hidden',
+    borderRadius: Radius["3xl"],
+    overflow: "hidden",
     ...Shadows.lg,
   },
   bannerImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   bannerOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     padding: 24,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   bannerSub: {
     fontSize: 11,
     fontWeight: Typography.weights.extrabold,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     letterSpacing: 2,
   },
   bannerMain: {
@@ -294,37 +313,37 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.3)',
-    overflow: 'hidden',
+    borderColor: "rgba(255,255,255,0.3)",
+    overflow: "hidden",
   },
   avatarImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   dailyQuoteBox: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: "rgba(255,255,255,0.15)",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: Radius.xl,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   quoteText: {
     color: Colors.white,
     fontSize: 12,
     fontWeight: Typography.weights.medium,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   statsOverviewRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: Spacing.xl,
     marginTop: 25,
     gap: 12,
   },
   statMiniCard: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 16,
-    borderRadius: Radius['2xl'],
+    borderRadius: Radius["2xl"],
     backgroundColor: Colors.white,
     gap: 4,
   },
@@ -337,16 +356,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.textTertiary,
     fontWeight: Typography.weights.bold,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   section: {
     marginTop: 35,
     paddingHorizontal: Spacing.xl,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: {
@@ -360,50 +379,50 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   quickActionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   actionItem: {
     width: (SCREEN_WIDTH - Spacing.xl * 2 - 36) / 4,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 8,
   },
   actionIconBox: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 1,
-    borderRadius: Radius['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: Radius["2xl"],
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionLabel: {
     fontSize: 12,
     fontWeight: Typography.weights.bold,
     color: Colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   activeCourseCard: {
-    width: '100%',
-    borderRadius: Radius['3xl'],
-    overflow: 'hidden',
+    width: "100%",
+    borderRadius: Radius["3xl"],
+    overflow: "hidden",
     ...Shadows.md,
   },
   activeCourseGrad: {
     padding: 24,
   },
   activeCourseTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   courseIconCircle: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   activeCourseTitle: {
     color: Colors.white,
@@ -411,7 +430,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.extrabold,
   },
   activeCourseSub: {
-    color: 'rgba(255,255,255,0.85)',
+    color: "rgba(255,255,255,0.85)",
     fontSize: 12,
     marginTop: 2,
     fontWeight: Typography.weights.medium,
@@ -420,12 +439,12 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   progHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   progText: {
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     fontSize: 11,
     fontWeight: Typography.weights.bold,
   },
@@ -436,12 +455,12 @@ const styles = StyleSheet.create({
   },
   tipCard: {
     padding: 16,
-    borderRadius: Radius['2xl'],
-    borderColor: '#F1F5F9',
+    borderRadius: Radius["2xl"],
+    borderColor: "#F1F5F9",
   },
   tipContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   tipIconBox: {
@@ -449,8 +468,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 14,
     backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   tipTitle: {
     fontSize: 14,
@@ -464,21 +483,21 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   customCTACard: {
-    borderRadius: Radius['3xl'],
-    overflow: 'hidden',
+    borderRadius: Radius["3xl"],
+    overflow: "hidden",
     ...Shadows.md,
   },
   customCTAGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 24,
     gap: 16,
   },
   customCTALeft: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   customCTAIconBox: {
@@ -486,8 +505,8 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   customCTATitle: {
     color: Colors.white,
@@ -495,7 +514,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.extrabold,
   },
   customCTASub: {
-    color: 'rgba(255,255,255,0.85)',
+    color: "rgba(255,255,255,0.85)",
     fontSize: 12,
     marginTop: 2,
     fontWeight: Typography.weights.medium,

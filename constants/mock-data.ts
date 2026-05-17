@@ -17,6 +17,7 @@ export const MOCK_USER = {
   totalWords: 20,
   totalStudyMinutes: 2400,
   completedLessons: 24,
+  completedPractices: 8,
   badges: [
     { id: '1', name: 'Người mới', icon: '🌱', earned: true },
     { id: '2', name: 'Chuỗi 7 ngày', icon: '🔥', earned: true },
@@ -55,20 +56,19 @@ export const MOCK_DAILY_STATS = {
 export const MOCK_QUICK_ACTIONS = [
   {
     id: 'srs',
-    title: 'Ôn tập SRS',
+    title: 'Từ vựng theo ngày',
     icon: 'calendar',
     color: '#8B5CF6',
     route: '/practice/srs-review',
   },
   {
     id: 'flashcards',
-    title: 'Từ vựng',
+    title: 'Từ vựng theo chủ đề',
     icon: 'copy',
     color: '#EF5FA0',
     route: '/practice/flashcards',
   },
   { id: 'listening', title: 'Luyện nghe', icon: 'headset', color: '#60A5FA', route: '/(tabs)/library?tab=listening' },
-  { id: 'grammar', title: 'Ngữ pháp', icon: 'book', color: '#34D399', route: '/(tabs)/library?tab=courses' },
   { id: 'custom', title: 'Tự soạn bài', icon: 'create', color: '#8B5CF6', route: '/practice/custom-dictation' },
   { id: 'exam', title: 'Thi thử', icon: 'medal', color: '#FBBF24', route: '/practice/exam' },
 ] as const;
@@ -200,16 +200,53 @@ export const MOCK_FLASHCARD_SETS = [
 
 // ─── Individual Flashcards ───────────────────────────────────
 export const MOCK_FLASHCARDS = [
+  // fs1: Food/Drinks
   { id: 'fc1', korean: '사과', vietnamese: 'Quả táo', pronunciation: 'sa-gwa', example: '사과를 먹어요', exampleVi: 'Tôi ăn táo', mastered: true },
-  { id: 'fc2', korean: '물', vietnamese: 'Nước', pronunciation: 'mul', example: '물을 마셔요', exampleVi: 'Tôi uống nước', mastered: true },
-  { id: 'fc3', korean: '밥', vietnamese: 'Cơm', pronunciation: 'bap', example: '밥을 먹어요', exampleVi: 'Tôi ăn cơm', mastered: false },
-  { id: 'fc4', korean: '커피', vietnamese: 'Cà phê', pronunciation: 'keo-pi', example: '커피를 마셔요', exampleVi: 'Tôi uống cà phê', mastered: false },
-  { id: 'fc5', korean: '김치', vietnamese: 'Kim chi', pronunciation: 'gim-chi', example: '김치를 좋아해요', exampleVi: 'Tôi thích kim chi', mastered: true },
-  { id: 'fc6', korean: '학교', vietnamese: 'Trường học', pronunciation: 'hak-gyo', example: '학교에 가요', exampleVi: 'Tôi đi đến trường', mastered: false },
-  { id: 'fc7', korean: '선생님', vietnamese: 'Giáo viên', pronunciation: 'seon-saeng-nim', example: '선생님을 만나요', exampleVi: 'Tôi gặp giáo viên', mastered: false },
-  { id: 'fc8', korean: '친구', vietnamese: 'Bạn bè', pronunciation: 'chin-gu', example: '친구와 놀아요', exampleVi: 'Tôi chơi cùng bạn', mastered: false },
-  { id: 'fc9', korean: '공부', vietnamese: 'Học tập', pronunciation: 'gong-bu', example: '도서관에서 공부해요', exampleVi: 'Tôi học ở thư viện', mastered: false },
-  { id: 'fc10', korean: '책', vietnamese: 'Sách', pronunciation: 'chaek', example: '책을 읽어요', exampleVi: 'Tôi đọc sách', mastered: false },
+  { id: 'fc2', korean: '비행기', vietnamese: 'Máy bay', pronunciation: 'bi-haeng-gi', example: '비행기가 날아가요', exampleVi: 'Máy bay bay qua', mastered: true },
+  { id: 'fc3', korean: '회사', vietnamese: 'Công ty', pronunciation: 'hoe-sa', example: '회사에 다녀요', exampleVi: 'Tôi làm việc ở công ty', mastered: false },
+  { id: 'fc4', korean: '시간', vietnamese: 'Thời gian', pronunciation: 'si-gan', example: '시간이 없어요', exampleVi: 'Tôi không có thời gian', mastered: false },
+  { id: 'fc5', korean: '행복', vietnamese: 'Hạnh phúc', pronunciation: 'haeng-bok', example: '정말 행복해요', exampleVi: 'Tôi thật sự hạnh phúc', mastered: true },
+  { id: 'fc6', korean: '가족', vietnamese: 'Gia đình', pronunciation: 'ga-jok', example: '우리 가족을 사랑해요', exampleVi: 'Tôi yêu gia đình tôi', mastered: false },
+
+  // fs2: Travel/Transportation
+  { id: 'fc7', korean: '커피', vietnamese: 'Cà phê', pronunciation: 'keo-pi', example: '커피를 마셔요', exampleVi: 'Tôi uống cà phê', mastered: false },
+  { id: 'fc8', korean: '버스', vietnamese: 'Xe buýt', pronunciation: 'beo-seu', example: '버스를 타고 가요', exampleVi: 'Tôi đi bằng xe buýt', mastered: false },
+  { id: 'fc9', korean: '회의', vietnamese: 'Cuộc họp', pronunciation: 'hoe-ui', example: '회의를 시작합시다', exampleVi: 'Hãy bắt đầu cuộc họp nào', mastered: false },
+  { id: 'fc10', korean: '오늘', vietnamese: 'Hôm nay', pronunciation: 'o-neul', example: '오늘 날씨가 좋아요', exampleVi: 'Hôm nay thời tiết đẹp', mastered: false },
+  { id: 'fc11', korean: '슬픔', vietnamese: 'Nỗi buồn', pronunciation: 'seul-peum', example: '슬픔을 잊어요', exampleVi: 'Hãy quên đi nỗi buồn', mastered: false },
+  { id: 'fc12', korean: '부모', vietnamese: 'Bố mẹ', pronunciation: 'bu-mo', example: '부모님을 공경해요', exampleVi: 'Tôi kính trọng bố mẹ', mastered: false },
+
+  // fs3: Work/Office
+  { id: 'fc13', korean: '김치', vietnamese: 'Kim chi', pronunciation: 'gim-chi', example: '김치를 좋아해요', exampleVi: 'Tôi thích kim chi', mastered: true },
+  { id: 'fc14', korean: '지하철', vietnamese: 'Tàu điện ngầm', pronunciation: 'ji-ha-cheol', example: '지하철을 타요', exampleVi: 'Tôi đi tàu điện ngầm', mastered: false },
+  { id: 'fc15', korean: '컴퓨터', vietnamese: 'Máy tính', pronunciation: 'keom-pyu-teo', example: '컴퓨터가 빨라요', exampleVi: 'Máy tính này rất nhanh', mastered: false },
+  { id: 'fc16', korean: '내일', vietnamese: 'Ngày mai', pronunciation: 'nae-il', example: '내일 만나요', exampleVi: 'Ngày mai gặp lại nhé', mastered: false },
+  { id: 'fc17', korean: '기쁨', vietnamese: 'Niềm vui', pronunciation: 'gi-ppeum', example: '기쁨이 가득해요', exampleVi: 'Ngập tràn niềm vui', mastered: false },
+  { id: 'fc18', korean: '형제', vietnamese: 'Anh chị em', pronunciation: 'hyeong-je', example: '형제가 세 명이에요', exampleVi: 'Tôi có 3 anh chị em', mastered: false },
+
+  // fs4: Numbers/Time
+  { id: 'fc19', korean: '불고기', vietnamese: 'Thịt nướng bulgogi', pronunciation: 'bul-go-gi', example: '불고기를 먹고 싶어요', exampleVi: 'Tôi muốn ăn thịt bò nướng', mastered: false },
+  { id: 'fc20', korean: '여권', vietnamese: 'Hộ chiếu', pronunciation: 'yeo-gwon', example: '여권을 보여주세요', exampleVi: 'Vui lòng xuất trình hộ chiếu', mastered: false },
+  { id: 'fc21', korean: '서류', vietnamese: 'Tài liệu', pronunciation: 'seo-ryu', example: '서류를 작성해요', exampleVi: 'Tôi soạn thảo tài liệu', mastered: false },
+  { id: 'fc22', korean: '달력', vietnamese: 'Lịch treo tường', pronunciation: 'dal-ryeok', example: '달력을 봐요', exampleVi: 'Tôi nhìn tờ lịch', mastered: false },
+  { id: 'fc23', korean: '화', vietnamese: 'Sự tức giận', pronunciation: 'hwa', example: '화가 나요', exampleVi: 'Tôi đang nổi giận', mastered: false },
+  { id: 'fc24', korean: '이름', vietnamese: 'Tên', pronunciation: 'i-reum', example: '이름이 무엇입니까?', exampleVi: 'Tên bạn là gì?', mastered: false },
+
+  // fs5: Emotions/Personality
+  { id: 'fc25', korean: '비빔밥', vietnamese: 'Cơm trộn bibimbap', pronunciation: 'bi-bim-bap', example: '비빔밥이 맛있어요', exampleVi: 'Cơm trộn rất ngon', mastered: false },
+  { id: 'fc26', korean: '지도', vietnamese: 'Bản đồ', pronunciation: 'ji-do', example: '지도를 보고 가요', exampleVi: 'Xem bản đồ rồi đi', mastered: false },
+  { id: 'fc27', korean: '전화', vietnamese: 'Điện thoại', pronunciation: 'jeon-hwa', example: '전화해 주세요', exampleVi: 'Hãy gọi điện cho tôi nhé', mastered: false },
+  { id: 'fc28', korean: '시계', vietnamese: 'Đồng hồ', pronunciation: 'si-gye', example: '시계가 예뻐요', exampleVi: 'Cái đồng hồ thật đẹp', mastered: false },
+  { id: 'fc29', korean: '피곤', vietnamese: 'Mệt mỏi', pronunciation: 'pi-gon', example: '너무 피곤해요', exampleVi: 'Tôi mệt mỏi quá', mastered: false },
+  { id: 'fc30', korean: '나이', vietnamese: 'Tuổi tác', pronunciation: 'na-i', example: '나이가 많아요', exampleVi: 'Tuổi đã cao', mastered: false },
+
+  // fs6: Family/Self
+  { id: 'fc31', korean: '라면', vietnamese: 'Mì gói', pronunciation: 'ra-myeon', example: '라면을 끓여요', exampleVi: 'Tôi nấu mì ăn', mastered: false },
+  { id: 'fc32', korean: '호텔', vietnamese: 'Khách sạn', pronunciation: 'ho-tel', example: '호텔에 머물러요', exampleVi: 'Tôi ở lại khách sạn', mastered: false },
+  { id: 'fc33', korean: '동료', vietnamese: 'Đồng nghiệp', pronunciation: 'dong-ryo', example: '회사 동료를 만나요', exampleVi: 'Tôi gặp đồng nghiệp cùng công ty', mastered: false },
+  { id: 'fc34', korean: '숫자', vietnamese: 'Con số', pronunciation: 'sut-ja', example: '숫자를 세어봐요', exampleVi: 'Hãy đếm các con số', mastered: false },
+  { id: 'fc35', korean: '친절', vietnamese: 'Thân thiện', pronunciation: 'chin-jeol', example: '그 사람은 친절해요', exampleVi: 'Người đó rất thân thiện', mastered: false },
+  { id: 'fc36', korean: '고향', vietnamese: 'Quê hương', pronunciation: 'go-hyang', example: '고향이 그립습니다', exampleVi: 'Tôi nhớ quê hương', mastered: false },
 ] as const;
 
 export const MOCK_GRAMMAR = [

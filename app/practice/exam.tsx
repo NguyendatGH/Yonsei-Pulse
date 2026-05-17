@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, ProgressBar } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
 import { examRepo, Exam, Question } from '@/db/repos/examRepo';
+import { statsRepo } from '@/db/repos/statsRepo';
 import { ActivityIndicator } from 'react-native';
 
 export default function ExamScreen() {
@@ -58,7 +59,7 @@ export default function ExamScreen() {
   const question = exam.questions[currentQ];
   const progress = (currentQ + 1) / totalQ;
 
-  const handleFinish = (currentAnswers: Record<number, any>) => {
+  const handleFinish = async (currentAnswers: Record<number, any>) => {
     if (!exam) return;
     let correct = 0;
     exam.questions.forEach((q, index) => {
@@ -76,6 +77,8 @@ export default function ExamScreen() {
     const timeTakenSec = (30 * 60) - timeLeft;
     const timeTakenStr = formatTime(timeTakenSec);
 
+    await statsRepo.logExamSession(score, correct, totalQ, timeTakenStr);
+
     router.push({
       pathname: '/practice/exam-result',
       params: {
@@ -85,6 +88,8 @@ export default function ExamScreen() {
         wrongAnswers: totalQ - correct,
         timeTaken: timeTakenStr,
         passed: score >= exam.passingScore ? 'true' : 'false',
+        questions: JSON.stringify(exam.questions),
+        userAnswers: JSON.stringify(currentAnswers),
       }
     });
   };

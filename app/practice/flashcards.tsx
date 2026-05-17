@@ -17,6 +17,7 @@ import { ProgressBar } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadows } from '@/constants/theme';
 import { useFlashcards } from '@/hooks/use-flashcards';
 import { userRepo } from '@/db/repos/userRepo';
+import { statsRepo } from '@/db/repos/statsRepo';
 
 export default function FlashcardScreen() {
   const router = useRouter();
@@ -28,17 +29,29 @@ export default function FlashcardScreen() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [masteredCount, setMasteredCount] = useState(0);
   const [sessionStart] = useState(Date.now());
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const flipAnim = React.useRef(new Animated.Value(0)).current;
 
   // Speak function
   const speak = (text: string) => {
-    Speech.speak(text, { language: 'ko-KR', rate: 0.9 });
+    setIsSpeaking(true);
+    Speech.stop();
+    Speech.speak(text, { 
+      language: 'ko-KR', 
+      rate: 0.9,
+      onStart: () => setIsSpeaking(true),
+      onDone: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
   };
 
   React.useEffect(() => {
     if (cards.length > 0 && cards[currentIndex]) {
       speak(cards[currentIndex].korean);
     }
+    return () => {
+      Speech.stop();
+    };
   }, [currentIndex, cards]);
 
   if (loading || cards.length === 0) {
@@ -54,6 +67,7 @@ export default function FlashcardScreen() {
   const progress = (currentIndex + 1) / cards.length;
 
   const flipCard = () => {
+    if (isSpeaking) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.spring(flipAnim, {
       toValue: isFlipped ? 0 : 180,
@@ -69,6 +83,11 @@ export default function FlashcardScreen() {
   };
 
   const handleNext = async (mastered: boolean) => {
+    if (isSpeaking) return;
+    
+    // Log individual card review to SQLite database history
+    await statsRepo.logFlashcardReview(currentCard.id, mastered);
+
     if (mastered) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await markMastered(currentCard.id, true);
@@ -196,13 +215,23 @@ export default function FlashcardScreen() {
 
       <View style={[styles.controlFooter, { paddingBottom: insets.bottom + 30 }]}>
         <View style={styles.btnRow}>
-           <TouchableOpacity style={styles.btnForgot} onPress={() => handleNext(false)} activeOpacity={0.8}>
-              <Text style={styles.txtForgot}>Quên rồi</Text>
+           <TouchableOpacity 
+             style={[styles.btnForgot, isSpeaking && { opacity: 0.5 }]} 
+             onPress={() => !isSpeaking && handleNext(false)} 
+             activeOpacity={0.8}
+             disabled={isSpeaking}
+           >
+              <Text style={styles.txtForgot}>{isSpeaking ? "Đang phát..." : "Quên rồi"}</Text>
            </TouchableOpacity>
-           <TouchableOpacity style={styles.btnRemember} onPress={() => handleNext(true)} activeOpacity={0.8}>
+           <TouchableOpacity 
+             style={[styles.btnRemember, isSpeaking && { opacity: 0.5 }]} 
+             onPress={() => !isSpeaking && handleNext(true)} 
+             activeOpacity={0.8}
+             disabled={isSpeaking}
+           >
               <LinearGradient colors={[Colors.primary, '#F28C9D']} style={styles.btnRememberGrad}>
-                 <Text style={styles.txtRemember}>Đã thuộc</Text>
-                 <Ionicons name="chevron-forward" size={18} color={Colors.white} />
+                 <Text style={styles.txtRemember}>{isSpeaking ? "🔒 Nghe kỹ" : "Đã thuộc"}</Text>
+                 <Ionicons name={isSpeaking ? "lock-closed" : "chevron-forward"} size={18} color={Colors.white} />
               </LinearGradient>
            </TouchableOpacity>
         </View>
@@ -282,7 +311,7 @@ const styles = StyleSheet.create({
     backfaceVisibility: 'hidden',
     borderWidth: 1,
     borderColor: '#F3F4F6',
-    ...Shadows.xl,
+    ...Shadows.lg,
   },
   cardFront: {
     zIndex: 2,

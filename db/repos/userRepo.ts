@@ -14,6 +14,7 @@ export interface User {
   totalWords: number;
   totalStudyMinutes: number;
   completedLessons: number;
+  completedPractices: number;
   lastStudyDate: string | null;
 }
 
@@ -56,11 +57,16 @@ export const userRepo = {
     await db.runAsync('UPDATE users SET todayWords = todayWords + ? WHERE id = ?', [count, id]);
   },
 
+  async updateCompletedPractices(id: string, count = 1): Promise<void> {
+    const db = await getDb();
+    await db.runAsync('UPDATE users SET completedPractices = completedPractices + ? WHERE id = ?', [count, id]);
+  },
+
   async createUser(user: Partial<User>): Promise<void> {
     const db = await getDb();
     await db.runAsync(
-      `INSERT INTO users (id, name, email, password, avatar, level, xp, streak, joinDate, todayWords, totalWords, totalStudyMinutes, completedLessons, lastStudyDate) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, name, email, password, avatar, level, xp, streak, joinDate, todayWords, totalWords, totalStudyMinutes, completedLessons, completedPractices, lastStudyDate) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         user.id || Math.random().toString(36).substr(2, 9),
         user.name || 'New User',
@@ -71,7 +77,7 @@ export const userRepo = {
         user.xp || 0,
         user.streak || 0,
         new Date().toISOString().split('T')[0],
-        0, 0, 0, 0, null
+        0, 0, 0, 0, 0, null
       ]
     );
   }

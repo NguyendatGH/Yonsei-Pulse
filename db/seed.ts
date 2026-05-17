@@ -21,14 +21,15 @@ export const seedDb = async (force = false) => {
 
   // Check if seeded
   const userCount = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM users');
+  const flashcardCount = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM flashcards');
   
   if (userCount?.count === 0) {
     console.log('Seeding database...');
     
     // Seed User
     await db.runAsync(
-      `INSERT INTO users (id, name, email, password, avatar, level, xp, streak, joinDate, todayWords, totalWords, totalStudyMinutes, completedLessons) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, name, email, password, avatar, level, xp, streak, joinDate, todayWords, totalWords, totalStudyMinutes, completedLessons, completedPractices) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         MOCK_USER.id, 
         MOCK_USER.name, 
@@ -42,7 +43,8 @@ export const seedDb = async (force = false) => {
         MOCK_USER.todayWords, 
         MOCK_USER.totalWords, 
         MOCK_USER.totalStudyMinutes, 
-        MOCK_USER.completedLessons
+        MOCK_USER.completedLessons,
+        (MOCK_USER as any).completedPractices || 8
       ]
     );
 
@@ -117,5 +119,32 @@ export const seedDb = async (force = false) => {
     }
 
     console.log('Database seeded successfully.');
+  } else if (flashcardCount && flashcardCount.count < 36) {
+    console.log('Flashcards missing or outdated, re-seeding flashcards...');
+    await db.runAsync('DELETE FROM flashcards');
+    await db.runAsync('DELETE FROM flashcard_sets');
+    
+    // Seed Flashcard Sets
+    for (const set of MOCK_FLASHCARD_SETS) {
+      await db.runAsync(
+        `INSERT INTO flashcard_sets (id, title, emoji, totalCards, mastered, color, category) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [set.id, set.title, set.emoji, set.totalCards, set.mastered, set.color, set.category]
+      );
+    }
+
+    // Seed Flashcards
+    for (let i = 0; i < MOCK_FLASHCARDS.length; i++) {
+      const card = MOCK_FLASHCARDS[i];
+      const setIndex = i % MOCK_FLASHCARD_SETS.length;
+      const set_id = MOCK_FLASHCARD_SETS[setIndex].id;
+      
+      await db.runAsync(
+        `INSERT INTO flashcards (id, set_id, korean, vietnamese, pronunciation, example, exampleVi, mastered) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [card.id, set_id, card.korean, card.vietnamese, card.pronunciation, card.example, card.exampleVi, card.mastered ? 1 : 0]
+      );
+    }
+    console.log('Flashcards re-seeded successfully.');
   }
 };

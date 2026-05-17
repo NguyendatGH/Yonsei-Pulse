@@ -113,7 +113,7 @@ export default function SRSReviewScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Ôn tập SRS</Text>
+          <Text style={styles.headerTitle}>Ôn tập từ vựng</Text>
           <View style={{ width: 44 }} />
         </View>
         <View style={styles.emptyContainer}>

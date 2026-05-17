@@ -126,5 +126,19 @@ export const flashcardRepo = {
       mastered: mastered?.count ?? 0,
       due: due?.count ?? 0,
     };
+  },
+
+  async addCardToSet(setId: string, korean: string, vietnamese: string, pronunciation: string | null = null, example: string | null = null, exampleVi: string | null = null): Promise<void> {
+    const db = await getDb();
+    const id = Math.random().toString(36).substring(2, 9);
+    await db.runAsync(
+      `INSERT INTO flashcards (id, set_id, korean, vietnamese, pronunciation, example, exampleVi, mastered, interval, ease_factor, repetitions) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, 2.5, 0)`,
+      [id, setId, korean, vietnamese, pronunciation, example, exampleVi]
+    );
+    const total = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM flashcards WHERE set_id = ?', [setId]);
+    if (total) {
+      await db.runAsync('UPDATE flashcard_sets SET totalCards = ? WHERE id = ?', [total.count, setId]);
+    }
   }
 };

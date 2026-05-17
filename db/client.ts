@@ -28,6 +28,7 @@ export const initDb = async () => {
       totalWords INTEGER DEFAULT 0,
       totalStudyMinutes INTEGER DEFAULT 0,
       completedLessons INTEGER DEFAULT 0,
+      completedPractices INTEGER DEFAULT 0,
       lastStudyDate TEXT
     );
   `);
@@ -115,9 +116,50 @@ export const initDb = async () => {
     );
   `);
 
-  // Migration: Add missing columns to flashcards table
+  // Create Dictation History Table
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS dictation_history (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      accuracy_score INTEGER NOT NULL,
+      total_blanks INTEGER NOT NULL,
+      correct_blanks INTEGER NOT NULL
+    );
+  `);
+
+  // Create Exam History Table
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS exam_history (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      correct_answers INTEGER NOT NULL,
+      total_questions INTEGER NOT NULL,
+      time_taken TEXT NOT NULL
+    );
+  `);
+
+  // Create Flashcard History Table
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS flashcard_history (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      card_id TEXT,
+      is_correct INTEGER NOT NULL,
+      FOREIGN KEY (card_id) REFERENCES flashcards (id) ON DELETE CASCADE
+    );
+  `);
+
+  // Migration: Add missing columns to tables
   await migrateFlashcardsTable(db);
+  await migrateUsersTable(db);
 };
+
+async function migrateUsersTable(db: Awaited<ReturnType<typeof getDb>>) {
+  try {
+    await db.execAsync('ALTER TABLE users ADD COLUMN completedPractices INTEGER DEFAULT 0');
+  } catch {}
+}
 
 async function migrateFlashcardsTable(db: Awaited<ReturnType<typeof getDb>>) {
   try {

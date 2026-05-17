@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -80,6 +81,26 @@ export default function DictationPracticeScreen() {
   const [currentCharIndex, setCurrentCharIndex] = useState(0);
   const [waveformKey, setWaveformKey] = useState(0);
   const [waveformHeights, setWaveformHeights] = useState<number[]>([]);
+  const [availableVoices, setAvailableVoices] = useState<Speech.Voice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+
+  useEffect(() => {
+    async function loadVoices() {
+      try {
+        const voices = await Speech.getAvailableVoicesAsync();
+        const koVoices = voices.filter(v => v.language.startsWith('ko') || v.language.toLowerCase() === 'ko-kr');
+        setAvailableVoices(koVoices);
+        if (koVoices.length > 0) {
+          const defVoice = koVoices.find(v => (v.quality as string) === 'enhanced' || v.name.includes('Premium')) || koVoices[0];
+          setSelectedVoice(defVoice.identifier);
+        }
+      } catch (e) {
+        console.warn('Error loading TTS voices:', e);
+      }
+    }
+    loadVoices();
+  }, []);
 
   useEffect(() => {
     if (isPlaying) {
@@ -371,6 +392,7 @@ export default function DictationPracticeScreen() {
     Speech.speak(text, {
       language: "ko-KR",
       rate: rate,
+      voice: selectedVoice || undefined,
       onStart: () => setIsPlaying(true),
       onDone: () => {
         setIsPlaying(false);
@@ -751,6 +773,7 @@ export default function DictationPracticeScreen() {
           correctCount={correctCount}
           onRestart={startPractice}
           onExit={resetAll}
+          wordParts={wordParts}
         />
       );
     }
@@ -814,6 +837,19 @@ export default function DictationPracticeScreen() {
                   currentCharIndex >= part.charStart &&
                   currentCharIndex < part.charEnd + 2;
 
+                const getFeedbackStyle = () => {
+                  const input = part.userInput.trim();
+                  if (!input) return null;
+                  const correct = part.original;
+                  if (input.toLowerCase() === correct.toLowerCase()) {
+                    return styles.wordCorrect;
+                  }
+                  if (correct.toLowerCase().startsWith(input.toLowerCase())) {
+                    return { borderBottomColor: '#3B82F6', color: '#3B82F6' };
+                  }
+                  return styles.wordWrong;
+                };
+
                 return (
                   <View
                     key={part.id}
@@ -825,6 +861,8 @@ export default function DictationPracticeScreen() {
                           style={[
                             styles.wordInput,
                             isActive && styles.activeWordInput,
+                            getFeedbackStyle(),
+                            isPlaying && { opacity: 0.5 }
                           ]}
                           value={part.userInput}
                           onChangeText={(val) => {
@@ -834,6 +872,9 @@ export default function DictationPracticeScreen() {
                           }}
                           autoCorrect={false}
                           autoCapitalize="none"
+                          editable={!isPlaying}
+                          placeholder={isPlaying ? "🔒" : ""}
+                          placeholderTextColor={Colors.textTertiary}
                         />
                       </View>
                     ) : (
@@ -884,9 +925,16 @@ export default function DictationPracticeScreen() {
             />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Nghe & Điền từ</Text>
-          <TouchableOpacity style={styles.infoBtn} onPress={resetAll}>
-            <Ionicons name="refresh" size={22} color={Colors.textTertiary} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+            {availableVoices.length > 1 && (
+              <TouchableOpacity style={styles.infoBtn} onPress={() => setShowVoiceSettings(true)}>
+                <Ionicons name="mic" size={22} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.infoBtn} onPress={resetAll}>
+              <Ionicons name="refresh" size={22} color={Colors.textTertiary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.stepIndicator}>
@@ -907,12 +955,124 @@ export default function DictationPracticeScreen() {
         {step === "manual_input" && renderManualInput()}
         {step === "setup" && renderSetup()}
         {step === "practice" && renderPractice()}
+
+        <Modal
+          visible={showVoiceSettings}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowVoiceSettings(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.voiceSettingsCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Giọng đọc Tiếng Hàn</Text>
+                <TouchableOpacity onPress={() => setShowVoiceSettings(false)}>
+                  <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.modalSub}>Chọn giọng đọc mong muốn của bạn:</Text>
+              
+              <ScrollView style={styles.voicesList} showsVerticalScrollIndicator={false}>
+                {availableVoices.map((v) => {
+                  const isSelected = selectedVoice === v.identifier;
+                  return (
+                    <TouchableOpacity
+                      key={v.identifier}
+                      style={[styles.voiceItem, isSelected && styles.voiceItemActive]}
+                      onPress={() => {
+                        setSelectedVoice(v.identifier);
+                        setShowVoiceSettings(false);
+                      }}
+                    >
+                      <Ionicons 
+                        name={(v.quality as string) === 'enhanced' ? 'sparkles' : 'person-outline'} 
+                        size={18} 
+                        color={isSelected ? Colors.primary : Colors.textSecondary} 
+                      />
+                      <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={[styles.voiceName, isSelected && styles.voiceNameActive]}>
+                          {v.name.replace('ko-kr', '').replace('ko-KR', '')}
+                        </Text>
+                        <Text style={styles.voiceDetails}>
+                          Chất lượng: {(v.quality as string) === 'enhanced' ? 'Nâng cao ✨' : 'Tiêu chuẩn'}
+                        </Text>
+                      </View>
+                      {isSelected && <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-end",
+  },
+  voiceSettingsCard: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    maxHeight: "70%",
+    ...Platform.select({
+      web: { boxShadow: "0px -4px 12px rgba(0,0,0,0.1)" } as any,
+      default: Shadows.lg,
+    }),
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+  },
+  modalSub: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 16,
+  },
+  voicesList: {
+    marginBottom: 16,
+  },
+  voiceItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: Radius.xl,
+    backgroundColor: "#F8FAFC",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  voiceItemActive: {
+    backgroundColor: "#FFF0F3",
+    borderColor: Colors.primary,
+  },
+  voiceName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  voiceNameActive: {
+    color: Colors.primary,
+  },
+  voiceDetails: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
   container: {
     flex: 1,
     backgroundColor: "#FAF9FB",
@@ -1226,7 +1386,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...Platform.select({
       web: { boxShadow: "0px 8px 24px rgba(236, 72, 153, 0.4)" } as any,
-      default: { ...Shadows.xl, shadowColor: "#EC4899" },
+      default: { ...Shadows.lg, shadowColor: "#EC4899" },
     }),
   },
   seekBtn: {
