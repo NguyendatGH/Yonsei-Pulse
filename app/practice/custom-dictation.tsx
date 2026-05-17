@@ -262,6 +262,7 @@ export default function DictationPracticeScreen() {
 
   const startPractice = async () => {
     if (!selectedPara) return;
+    setShowResult(false);
 
     const text = selectedPara.text;
     const words = text.split(/\s+/);

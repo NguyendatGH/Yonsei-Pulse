@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Card, ProgressBar } from '@/components/ui';
@@ -32,9 +32,11 @@ export default function SRSReviewScreen() {
   // Animation values
   const flipAnim = React.useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    loadDueCards();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadDueCards();
+    }, [])
+  );
 
   const loadDueCards = async () => {
     try {

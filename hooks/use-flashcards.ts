@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { flashcardRepo, FlashcardSet, Flashcard } from '../db/repos/flashcardRepo';
 
 export function useFlashcards(setId?: string) {
@@ -24,17 +25,19 @@ export function useFlashcards(setId?: string) {
     }
   };
 
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      await fetchSets();
-      if (setId) {
-        await fetchCards(setId);
-      }
-      setLoading(false);
-    };
-    init();
-  }, [setId]);
+  useFocusEffect(
+    useCallback(() => {
+      const init = async () => {
+        setLoading(true);
+        await fetchSets();
+        if (setId) {
+          await fetchCards(setId);
+        }
+        setLoading(false);
+      };
+      init();
+    }, [setId])
+  );
 
   const markMastered = async (cardId: string, mastered: boolean) => {
     try {

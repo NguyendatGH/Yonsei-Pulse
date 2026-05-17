@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card } from '@/components/ui';
 import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
@@ -23,26 +23,24 @@ interface DictationResultsProps {
 
 export function DictationResults({ score, totalBlanks, correctCount, onRestart, onExit, wordParts }: DictationResultsProps) {
   const [showReview, setShowReview] = useState(false);
-  const [addedWords, setAddedWords] = useState<Record<string, boolean>>({});
+  const [customWord, setCustomWord] = useState('');
+  const [customMeaning, setCustomMeaning] = useState('');
+  const [savedCards, setSavedCards] = useState<{word: string, meaning: string}[]>([]);
 
   React.useEffect(() => {
     statsRepo.logDictationSession(score, totalBlanks, correctCount);
   }, [score, totalBlanks, correctCount]);
 
-  const handleAddWord = async (word: string) => {
+  const handleCreateCustomFlashcard = async () => {
+    if (!customWord.trim() || !customMeaning.trim()) {
+      Alert.alert('Thiếu thông tin', 'Vui lòng nhập cả từ tiếng Hàn và nghĩa tiếng Việt.');
+      return;
+    }
     try {
-      let vnDef = "Từ mới từ Dictation";
-      if (wordParts) {
-        const lowerWord = word.trim().toLowerCase();
-        if (lowerWord === '린') vnDef = 'Linh (tên riêng)';
-        else if (lowerWord === '공부하고') vnDef = 'Đang học';
-        else if (lowerWord === '에서') vnDef = 'Ở, tại, từ';
-        else if (lowerWord === '과일') vnDef = 'Trái cây';
-        else if (lowerWord === '오천') vnDef = '5000 (năm nghìn)';
-        else if (lowerWord === '싸요') vnDef = 'Rẻ';
-      }
-      await flashcardRepo.addCardToSet('fs1', word, vnDef);
-      setAddedWords(prev => ({ ...prev, [word]: true }));
+      await flashcardRepo.addCardToSet('fs1', customWord.trim(), customMeaning.trim());
+      setSavedCards(prev => [...prev, { word: customWord.trim(), meaning: customMeaning.trim() }]);
+      setCustomWord('');
+      setCustomMeaning('');
     } catch (e) {
       console.error('Error adding card:', e);
       Alert.alert('Lỗi', 'Không thể thêm từ vựng vào Flashcard.');
@@ -70,108 +68,82 @@ export function DictationResults({ score, totalBlanks, correctCount, onRestart, 
         </Card>
       </View>
 
-      <Card variant="outlined" style={styles.summaryCard}>
-        <View style={styles.summaryItem}>
-          <View style={styles.summaryIconBox}>
-            <Ionicons name="flash" size={20} color={Colors.primary} />
-          </View>
-          <View>
-            <Text style={styles.summaryLabel}>Kinh nghiệm</Text>
-            <Text style={styles.summaryValue}>+{score} XP</Text>
-          </View>
-        </View>
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryItem}>
-          <View style={styles.summaryIconBox}>
-            <Ionicons name="time" size={20} color="#60A5FA" />
-          </View>
-          <View>
-            <Text style={styles.summaryLabel}>Thời lượng</Text>
-            <Text style={styles.summaryValue}>Luyện tập nghe</Text>
-          </View>
-        </View>
-      </Card>
-
-      {/* Expandable Review Section */}
+      {/* Full Script Section */}
       {wordParts && wordParts.length > 0 && (
-        <Card variant="outlined" style={styles.collapsibleCard}>
-          <TouchableOpacity 
-            style={styles.collapsibleHeader} 
-            onPress={() => setShowReview(!showReview)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.collapsibleTitleRow}>
-              <Ionicons name="book-outline" size={20} color={Colors.primary} />
-              <Text style={styles.collapsibleTitle}>Xem lại toàn bài</Text>
-            </View>
-            <Ionicons name={showReview ? "chevron-up" : "chevron-down"} size={20} color={Colors.textTertiary} />
-          </TouchableOpacity>
+        <Card variant="outlined" style={styles.fullScriptCard}>
+          <View style={styles.scriptHeader}>
+            <Ionicons name="document-text" size={20} color={Colors.primary} />
+            <Text style={styles.scriptTitle}>Script bài luyện</Text>
+          </View>
           
-          {showReview && (
-            <View style={styles.collapsibleContent}>
-              <View style={styles.reviewParagraph}>
-                {wordParts.map((part) => {
-                  if (part.isBlank) {
-                    const isCorrect = part.userInput.trim().toLowerCase() === part.original.trim().toLowerCase();
-                    return (
-                      <Text 
-                        key={part.id} 
-                        style={[
-                          styles.reviewWord, 
-                          isCorrect ? styles.reviewWordCorrect : styles.reviewWordWrong
-                        ]}
-                      >
-                        {part.original} {`(${part.userInput ? part.userInput : 'trống'})`}{' '}
-                      </Text>
-                    );
-                  }
-                  return (
-                    <Text key={part.id} style={styles.reviewTextNormal}>
-                      {part.display}{' '}
-                    </Text>
-                  );
-                })}
-              </View>
-              
-              <View style={styles.divider} />
-              
-              <Text style={styles.vocabSectionTitle}>Lưu từ vựng mới vào Flashcard</Text>
-              {wordParts.filter(p => p.isBlank).map((part) => {
-                const isAdded = addedWords[part.original];
+          <View style={styles.reviewParagraph}>
+            {wordParts.map((part) => {
+              if (part.isBlank) {
+                const isCorrect = part.userInput.trim().toLowerCase() === part.original.trim().toLowerCase();
                 return (
-                  <View key={part.id} style={styles.vocabRow}>
-                    <View style={styles.vocabInfo}>
-                      <Text style={styles.vocabKr}>{part.original}</Text>
-                      <Text style={styles.vocabVi}>
-                        {part.original.toLowerCase() === '린' ? 'Linh (tên riêng)' :
-                         part.original.toLowerCase() === '공부하고' ? 'Đang học' :
-                         part.original.toLowerCase() === '에서' ? 'Ở, tại, từ' :
-                         part.original.toLowerCase() === '과일' ? 'Trái cây' :
-                         part.original.toLowerCase() === '오천' ? '5000 (năm nghìn)' :
-                         part.original.toLowerCase() === '싸요' ? 'Rẻ' : 'Từ vựng mới'}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={[styles.btnAddVocab, isAdded && styles.btnAddVocabActive]}
-                      onPress={() => !isAdded && handleAddWord(part.original)}
-                      disabled={isAdded}
-                    >
-                      <Ionicons 
-                        name={isAdded ? "checkmark" : "add"} 
-                        size={16} 
-                        color={isAdded ? Colors.white : Colors.primary} 
-                      />
-                      <Text style={[styles.btnAddVocabTxt, isAdded && styles.btnAddVocabTxtActive]}>
-                        {isAdded ? "Đã lưu" : "Lưu thẻ"}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                  <Text 
+                    key={part.id} 
+                    style={[
+                      styles.reviewWord, 
+                      isCorrect ? styles.reviewWordCorrect : styles.reviewWordWrong
+                    ]}
+                  >
+                    {part.original} {`(${part.userInput ? part.userInput : 'trống'})`}{' '}
+                  </Text>
                 );
-              })}
-            </View>
-          )}
+              }
+              return (
+                <Text key={part.id} style={styles.reviewTextNormal}>
+                  {part.display}{' '}
+                </Text>
+              );
+            })}
+          </View>
         </Card>
       )}
+
+      {/* Manual Flashcard Creation Form */}
+      <Card variant="outlined" style={styles.flashcardFormCard}>
+        <Text style={styles.vocabSectionTitle}>Tạo thẻ Flashcard mới</Text>
+        <Text style={styles.vocabSectionDesc}>Nhìn vào script bên trên, chọn từ vựng bạn muốn học và lưu vào kho nhé.</Text>
+        
+        <View style={styles.inputGroup}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Từ tiếng Hàn..."
+            value={customWord}
+            onChangeText={setCustomWord}
+            placeholderTextColor="#9CA3AF"
+          />
+          <TextInput
+            style={styles.textInput}
+            placeholder="Nghĩa tiếng Việt..."
+            value={customMeaning}
+            onChangeText={setCustomMeaning}
+            placeholderTextColor="#9CA3AF"
+          />
+        </View>
+        
+        <Button 
+          title="Lưu thẻ vào kho" 
+          onPress={handleCreateCustomFlashcard} 
+          variant="secondary" 
+          icon={<Ionicons name="save-outline" size={18} color={Colors.primary} />}
+        />
+
+        {savedCards.length > 0 && (
+          <View style={styles.savedCardsList}>
+            <Text style={styles.savedCardsTitle}>Đã lưu ({savedCards.length}):</Text>
+            {savedCards.map((card, idx) => (
+              <View key={idx} style={styles.savedCardItem}>
+                <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                <Text style={styles.savedCardWord}>{card.word}</Text>
+                <Text style={styles.savedCardMeaning}>- {card.meaning}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </Card>
 
       <View style={styles.actions}>
         <Button title="Luyện tập lại" onPress={onRestart} fullWidth variant="primary" size="lg" style={styles.btn} />
@@ -233,71 +205,30 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '900',
   },
-  summaryCard: {
-    padding: 0,
+  fullScriptCard: {
+    padding: 20,
     marginBottom: 24,
     borderRadius: Radius.xl,
+    backgroundColor: Colors.white,
   },
-  summaryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    gap: 14,
-  },
-  summaryIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  summaryValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-  },
-  collapsibleCard: {
-    padding: 0,
-    marginBottom: 24,
-    overflow: 'hidden',
-    borderRadius: Radius.xl,
-  },
-  collapsibleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-  },
-  collapsibleTitleRow: {
+  scriptHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  collapsibleTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+  scriptTitle: {
+    fontSize: 16,
+    fontWeight: '800',
     color: '#1F2937',
-  },
-  collapsibleContent: {
-    padding: 16,
-    backgroundColor: Colors.white,
   },
   reviewParagraph: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     lineHeight: 28,
-    marginBottom: 16,
   },
   reviewWord: {
     fontSize: 15,
@@ -316,61 +247,67 @@ const styles = StyleSheet.create({
   reviewTextNormal: {
     fontSize: 15,
     color: '#374151',
+    lineHeight: 26,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 14,
+  flashcardFormCard: {
+    padding: 20,
+    marginBottom: 24,
+    borderRadius: Radius.xl,
+    backgroundColor: '#FDF2F8', // very light pink bg for flashcard area
+    borderColor: '#FCE7F3',
   },
   vocabSectionTitle: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginBottom: 6,
+  },
+  vocabSectionDesc: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  inputGroup: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  textInput: {
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: Radius.lg,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.textPrimary,
+  },
+  savedCardsList: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#FCE7F3',
+  },
+  savedCardsTitle: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#1F2937',
+    color: Colors.textSecondary,
     marginBottom: 10,
   },
-  vocabRow: {
+  savedCardItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    marginBottom: 6,
+    gap: 8,
   },
-  vocabInfo: {
-    flex: 1,
-  },
-  vocabKr: {
-    fontSize: 15,
-    fontWeight: '700',
+  savedCardWord: {
+    fontSize: 14,
+    fontWeight: '800',
     color: Colors.textPrimary,
-    marginBottom: 2,
   },
-  vocabVi: {
-    fontSize: 12,
+  savedCardMeaning: {
+    fontSize: 13,
     color: Colors.textSecondary,
-  },
-  btnAddVocab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    backgroundColor: '#FFF0F3',
-  },
-  btnAddVocabActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
-  },
-  btnAddVocabTxt: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  btnAddVocabTxtActive: {
-    color: Colors.white,
   },
   actions: {
     gap: 12,
