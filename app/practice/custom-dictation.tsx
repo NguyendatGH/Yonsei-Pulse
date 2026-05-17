@@ -204,12 +204,16 @@ export default function DictationPracticeScreen() {
       audio.addEventListener("ended", onEnded);
       audio.addEventListener("error", onError);
 
-      // Pre-load voices for Chrome
+      // Pre-load & cache voices for Chrome (async)
       if (window.speechSynthesis) {
-        window.speechSynthesis.getVoices();
-        window.speechSynthesis.onvoiceschanged = () => {
-          window.speechSynthesis.getVoices();
+        const loadVoicesList = () => {
+          window.speechSynthesis.getVoices(); // trigger cache
         };
+        loadVoicesList();
+        // Chrome fires onvoiceschanged when voices are ready
+        if (window.speechSynthesis.onvoiceschanged === null || window.speechSynthesis.onvoiceschanged === undefined) {
+          window.speechSynthesis.addEventListener('voiceschanged', loadVoicesList);
+        }
       }
 
       return () => {
@@ -333,96 +337,116 @@ export default function DictationPracticeScreen() {
     setPositionMillis(0);
     hasReceivedBoundary.current = false;
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const doSpeak = () => {
+      const utterance = new SpeechSynthesisUtterance(text);
 
-    // Improved voice selection for Chrome/Web
+      // Chrome loads voices asynchronously — always try to grab latest list
+      const voices = window.speechSynthesis.getVoices();
+      
+      // Lọc tất cả các giọng tiếng Hàn
+      const koVoices = voices.filter(v => v.lang === "ko-KR" || v.lang.startsWith("ko"));
+      
+      // Ưu tiên các giọng đọc Premium / Natural (Google, Microsoft Online, v.v)
+      const premiumVoice = koVoices.find(v => 
+        v.name.includes("Google") || 
+        v.name.includes("Online") || 
+        v.name.includes("Natural") ||
+        v.name.includes("Yumi")
+      );
+      
+      const koreanVoice = premiumVoice || koVoices[0];
+      
+      if (koreanVoice) {
+        utterance.voice = koreanVoice;
+      }
+      // Always set lang so browser uses Korean TTS even without explicit voice
+      utterance.lang = "ko-KR";
+      utterance.rate = rate;
+
+      utterance.onstart = () => {
+        setIsPlaying(true);
+        playbackStartTime.current = Date.now();
+      };
+
+      utterance.onend = () => {
+        setIsPlaying(false);
+        setCurrentCharIndex(text.length);
+        setPositionMillis(durationMillis);
+
+        if (positionIntervalRef.current) {
+          clearInterval(positionIntervalRef.current);
+          positionIntervalRef.current = null;
+        }
+
+        setTimeout(() => {
+          setCurrentCharIndex(0);
+          setPositionMillis(0);
+        }, 1500);
+      };
+
+      utterance.onboundary = (event) => {
+        if (event.name === "word") {
+          hasReceivedBoundary.current = true;
+          setCurrentCharIndex(event.charIndex);
+
+          // --- REAL-TIME CALIBRATION ---
+          const elapsed = Date.now() - playbackStartTime.current;
+          if (elapsed > 200 && event.charIndex > 0) {
+            const actualCPMS = event.charIndex / elapsed;
+            const newDuration = text.length / actualCPMS;
+            setDurationMillis(newDuration);
+            setPositionMillis(elapsed);
+          } else {
+            const progress = event.charIndex / (text.length || 1);
+            setPositionMillis(progress * durationMillis);
+          }
+        }
+      };
+
+      utterance.onerror = (e) => {
+        // 'interrupted' fires when cancel() is called — not a real error
+        if ((e as any).error === "interrupted") return;
+        console.warn("Speech error:", e);
+        setIsPlaying(false);
+      };
+
+      speechSynthesisRef.current = utterance;
+
+      const charCount = text.length;
+      setTotalChars(charCount);
+      const estimatedDuration = (charCount / (rate * 5.5)) * 1000;
+      setDurationMillis(estimatedDuration);
+
+      // Fallback interval for smooth progress bar
+      if (positionIntervalRef.current) clearInterval(positionIntervalRef.current);
+      positionIntervalRef.current = setInterval(() => {
+        setPositionMillis((prev) => {
+          const next = prev + 100;
+          if (next >= estimatedDuration) {
+            return estimatedDuration;
+          }
+          if (!hasReceivedBoundary.current) {
+            const progress = next / estimatedDuration;
+            const fallbackCharIndex = Math.floor(progress * charCount);
+            setCurrentCharIndex((curr) => Math.max(curr, fallbackCharIndex));
+          }
+          return next;
+        });
+      }, 100);
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // Chrome: voices may not be ready on first call — wait for them
     const voices = window.speechSynthesis.getVoices();
-    const koreanVoice = voices.find(
-      (v) => v.lang === "ko-KR" || v.lang.startsWith("ko"),
-    );
-    if (koreanVoice) {
-      utterance.voice = koreanVoice;
+    if (voices.length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        doSpeak();
+      };
+    } else {
+      doSpeak();
     }
-
-    utterance.lang = "ko-KR";
-    utterance.rate = rate;
-
-    utterance.onstart = () => {
-      setIsPlaying(true);
-      playbackStartTime.current = Date.now();
-    };
-
-    utterance.onend = () => {
-      setIsPlaying(false);
-      setCurrentCharIndex(text.length);
-      setPositionMillis(durationMillis);
-
-      if (positionIntervalRef.current) {
-        clearInterval(positionIntervalRef.current);
-        positionIntervalRef.current = null;
-      }
-
-      setTimeout(() => {
-        setCurrentCharIndex(0);
-        setPositionMillis(0);
-      }, 1500);
-    };
-
-    utterance.onboundary = (event) => {
-      if (event.name === "word") {
-        hasReceivedBoundary.current = true;
-        setCurrentCharIndex(event.charIndex);
-
-        // --- REAL-TIME CALIBRATION ---
-        const elapsed = Date.now() - playbackStartTime.current;
-        if (elapsed > 200 && event.charIndex > 0) {
-          // Calculate actual speed: characters per millisecond
-          const actualCPMS = event.charIndex / elapsed;
-          // Recalculate total duration based on actual measured speed
-          const newDuration = text.length / actualCPMS;
-          setDurationMillis(newDuration);
-          setPositionMillis(elapsed);
-        } else {
-          const progress = event.charIndex / (text.length || 1);
-          setPositionMillis(progress * durationMillis);
-        }
-      }
-    };
-
-    utterance.onerror = (e) => {
-      console.warn("Speech error:", e);
-      setIsPlaying(false);
-    };
-
-    speechSynthesisRef.current = utterance;
-
-    const charCount = text.length;
-    setTotalChars(charCount);
-    // 5.5 chars per second to ensure highlights reach the end before end of audio
-    const estimatedDuration = (charCount / (rate * 5.5)) * 1000;
-    setDurationMillis(estimatedDuration);
-
-    // Fallback interval for smooth progress bar and highlighting if onboundary fails
-    positionIntervalRef.current = setInterval(() => {
-      setPositionMillis((prev) => {
-        const next = prev + 100;
-        if (next >= estimatedDuration) {
-          // Don't clear yet, wait for onend
-          return estimatedDuration;
-        }
-
-        // Only update char index if onboundary isn't providing higher precision
-        if (!hasReceivedBoundary.current) {
-          const progress = next / estimatedDuration;
-          const fallbackCharIndex = Math.floor(progress * charCount);
-          setCurrentCharIndex((curr) => Math.max(curr, fallbackCharIndex));
-        }
-
-        return next;
-      });
-    }, 100);
-
-    window.speechSynthesis.speak(utterance);
   };
 
   const startMobileSpeech = (text: string, rate: number) => {
