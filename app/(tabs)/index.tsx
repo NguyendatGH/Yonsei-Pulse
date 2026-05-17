@@ -181,8 +181,8 @@ export default function HomeScreen() {
                 <Ionicons name="ribbon" size={24} color="#8B5CF6" />
               </View>
               <Text style={styles.statVal}>
-                {stats 
-                  ? (stats.totalExams + stats.totalDictations + stats.masteredFlashcards) 
+                {stats
+                  ? (stats.totalExams + stats.totalDictations + stats.masteredFlashcards)
                   : (user ? (user.completedPractices || 0) : 0)}
               </Text>
               <Text style={styles.statLabel}>Bài đã luyện ghi nhớ</Text>
@@ -243,7 +243,7 @@ export default function HomeScreen() {
                     Rèn luyện kỹ năng ghi nhớ
                   </Text>
                   <Text style={styles.customCTASub}>
-                    Học qua điền từ vựng khi nghe văn bản
+                    Ghi nhớ và điền các từ khoá đã bị ẩn
                   </Text>
                 </View>
               </View>
